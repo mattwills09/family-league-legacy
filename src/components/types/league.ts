@@ -5,8 +5,9 @@ export interface FantasyTeam {
     wins: number;
     losses: number;
     pointsFor: number;
-    pointsAgainst: number;
+    pointsAgainst: number
     pointDifferential: number;
     playoffAppearances: number;
+    championshipAppearances: number;
     championshipsWon: number;
 }

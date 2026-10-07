@@ -11,6 +11,7 @@ export const teams: FantasyTeam[] = [
         pointsAgainst: 400,
         pointDifferential: 50,
         playoffAppearances: 3,
+        championshipAppearances: 3,
         championshipsWon: 1
     },
     {
@@ -23,6 +24,7 @@ export const teams: FantasyTeam[] = [
         pointsAgainst: 410,
         pointDifferential: 10,
         playoffAppearances: 2,
+        championshipAppearances: 1,
         championshipsWon: 0
     }
 ]
