@@ -7,12 +7,16 @@ import {
 } from 'lucide-react'
 
 import { DetailCard } from '../DetailCard';
-import { teams } from '../data/mockLeagueData';
+import { teams, seasonContext } from '../data/mockLeagueData';
 
 export function DashboardPage() {
   const sortedTeams = [...teams].sort((a, b) => {
     if (b.wins !== a.wins) {
       return b.wins - a.wins
+    }
+
+    if (b.ties !== a.ties) {
+      return b.ties - a.ties
     }
 
     if (b.pointDifferential !== a.pointDifferential) {
@@ -45,10 +49,12 @@ export function DashboardPage() {
 
         <DetailCard
           label="Record"
-          value={`${topTeam.wins}-${topTeam.losses}`}
+          value={`${topTeam.wins}-${topTeam.losses}-${topTeam.ties}`}
           icon={ChartNoAxesColumnIncreasing}
         />
       </section>
+
+      <hr className="section-divider" />
 
       {/* CURRENT STANDINGS */}
 
@@ -60,49 +66,39 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="standings-table">
-          <div className="standings-row standings-heading">
-            <span>Rank</span>
-            <span>Team</span>
-            <span>Owner</span>
-            <span>Record</span>
-            <span>PF</span>
-            <span>PA</span>
-            <span>Diff</span>
-          </div>
-
-          {sortedTeams.map((team, index) => (
-            <div className="standings-row" key={team.id}>
-              <span>{index + 1}</span>
-
-              <strong>{team.name}</strong>
-
-              <span>{team.owner}</span>
-
-              <span>
-                {team.wins}-{team.losses}
-              </span>
-
-              <span>{team.pointsFor.toFixed(1)}</span>
-
-              <span>{team.pointsAgainst.toFixed(1)}</span>
-
-              <span
-                className={
-                  team.pointDifferential > 0
-                    ? 'positive-differential'
-                    : team.pointDifferential < 0
-                      ? 'negative-differential'
-                      : ''
-                }
-              >
-                {team.pointDifferential > 0 ? '+' : ''}
-                {team.pointDifferential.toFixed(1)}
-              </span>
-            </div>
-          ))}
+        <div className="standings-table" role="region" aria-label="League standings, scroll horizontally for all statistics" tabIndex={0}>
+          <table className="standings-data" aria-label="Current season league standings">
+            <thead>
+              <tr>
+                <th scope="col">Rank</th>
+                <th scope="col">Team</th>
+                <th scope="col">Owner</th>
+                <th scope="col"><abbr title="Wins-losses-ties">Record</abbr></th>
+                <th scope="col"><abbr title="Points for">PF</abbr></th>
+                <th scope="col"><abbr title="Points against">PA</abbr></th>
+                <th scope="col"><abbr title="Point differential">Diff</abbr></th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedTeams.map((team, index) => (
+                <tr key={team.id}>
+                  <td>{index + 1}</td>
+                  <td><strong>{team.name}</strong></td>
+                  <td>{team.owner}</td>
+                  <td>{team.wins}-{team.losses}-{team.ties}</td>
+                  <td>{team.pointsFor.toFixed(1)}</td>
+                  <td>{team.pointsAgainst.toFixed(1)}</td>
+                  <td className={team.pointDifferential > 0 ? 'positive-differential' : team.pointDifferential < 0 ? 'negative-differential' : ''}>
+                    {team.pointDifferential > 0 ? '+' : ''}{team.pointDifferential.toFixed(1)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
+
+      <hr className="section-divider" />
 
       {/* ALL-TIME HIGHLIGHTS */}
 
@@ -155,27 +151,38 @@ export function DashboardPage() {
                     <h3>{team.name}</h3>
                   </div>
 
-                  {team.championshipsWon > 0 && (
-                    <Trophy className="icon icon-accent" />
+                  {team.id === seasonContext.previousSeasonChampionTeamId && (
+                    <span role="img" aria-label="Previous season champion" title="Previous season champion">
+                      <Trophy className="icon icon-accent" aria-hidden="true" />
+                    </span>
                   )}
                 </div>
 
                 <div className="legacy-stats">
                   <div>
-                    <span>Championships</span>
-                    <strong>{team.championshipsWon}</strong>
+                    <span>Playoff Appearances</span>
+                    <strong>{team.playoffAppearances}</strong>
                   </div>
-
                   <div>
                     <span>Championship Appearances</span>
                     <strong>{team.championshipAppearances}</strong>
                   </div>
-
                   <div>
-                    <span>Playoff Appearances</span>
-                    <strong>{team.playoffAppearances}</strong>
+                    <span>Championships</span>
+                    <strong>{team.championshipsWon}</strong>
                   </div>
                 </div>
+                <details className="team-details">
+                  <summary>View team details</summary>
+                  <dl className="team-details-grid">
+                    <div><dt>Current Record</dt><dd>{team.wins}-{team.losses}-{team.ties}</dd></div>
+                    <div><dt>Standings Rank</dt><dd>{sortedTeams.findIndex((entry) => entry.id === team.id) + 1}</dd></div>
+                    <div><dt>Points For</dt><dd>{team.pointsFor.toFixed(1)}</dd></div>
+                    <div><dt>Points Against</dt><dd>{team.pointsAgainst.toFixed(1)}</dd></div>
+                    <div><dt>Win Percentage</dt><dd>{team.wins + team.losses + team.ties === 0 ? 'No games played' : `${(((team.wins + team.ties / 2) / (team.wins + team.losses + team.ties)) * 100).toFixed(1)}%`}</dd></div>
+                    <div><dt>Championships Won</dt><dd>{team.championshipAppearances === 0 ? 'No appearances' : `${team.championshipsWon} of ${team.championshipAppearances}`}</dd></div>
+                  </dl>
+                </details>
               </article>
             ))}
         </div>

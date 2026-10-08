@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
 
 import { Header } from './components/Header';
+import { Footer } from './components/Footer';
 import { DashboardPage } from './components/pages/DashboardPage';
 
 import './App.css';
@@ -24,7 +25,7 @@ function App() {
   const [theme, setTheme] = useState<Theme>(getInitialTheme)
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.dataset.theme = theme
     localStorage.setItem('theme', theme)
   }, [theme])
 
@@ -54,6 +55,7 @@ function App() {
       </button>
 
       <DashboardPage />
+      <Footer />
     </div>
   )
 }

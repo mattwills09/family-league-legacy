@@ -1,4 +1,4 @@
-import type { FantasyTeam } from "../types/league";
+import type { FantasyTeam, LeagueSeasonContext } from "../types/league";
 
 export const teams: FantasyTeam[] = [
     {
@@ -7,6 +7,7 @@ export const teams: FantasyTeam[] = [
         owner: "Owner A",
         wins: 10,
         losses: 6,
+        ties: 1,
         pointsFor: 450,
         pointsAgainst: 400,
         pointDifferential: 50,
@@ -20,6 +21,7 @@ export const teams: FantasyTeam[] = [
         owner: "Owner B",
         wins: 8,
         losses: 8,
+        ties: 1,
         pointsFor: 420,
         pointsAgainst: 410,
         pointDifferential: 10,
@@ -28,3 +30,7 @@ export const teams: FantasyTeam[] = [
         championshipsWon: 0
     }
 ]
+
+export const seasonContext: LeagueSeasonContext = {
+    previousSeasonChampionTeamId: null,
+}
