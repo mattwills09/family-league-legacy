@@ -130,6 +130,8 @@ export function DashboardPage() {
           />
         </div>
 
+        <hr className="section-divider" />
+
         <div className="legacy-grid">
           {teams
             .slice()

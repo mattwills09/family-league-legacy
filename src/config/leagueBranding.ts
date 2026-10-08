@@ -6,7 +6,7 @@ export interface LeagueBranding {
 }
 
 export const leagueBranding: LeagueBranding = {
-  name: 'The 12th Timers',
-  productName: 'Family League Legacy',
-  description: 'Fantasy football history and analytics for the Williams, Lundy, Pomponio, Jaslow, and Wolfe families.',
+  name: 'Family League Legacy',
+  productName: 'The 12th Timers',
+  description: 'Complete and Historically Accurate Fantasy Football History and Analytics for the Williams, Lundy, Pomponio, Jaslow, Wolfe and Biediger families!',
 }
