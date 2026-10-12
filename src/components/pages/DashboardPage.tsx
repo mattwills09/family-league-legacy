@@ -95,8 +95,8 @@ export function DashboardPage() {
         {liveData ? `ESPN · ${liveData.season} season · Updated ${new Date(liveData.fetchedAt).toLocaleString()}` : 'Sample dashboard · Illustrative data, not your ESPN league'}
         {!liveData && <button type="button" onClick={() => { setShowSample(false); retry() }}>Reconnect to ESPN</button>}
       </div>
-      {/* CURRENT SEASON SUMMARY */}
 
+      {/* CURRENT SEASON SUMMARY */}
       <section className="stats-grid current-stats-grid">
         <DetailCard
           label="Current Leader"
@@ -114,7 +114,6 @@ export function DashboardPage() {
       <hr className="section-divider" />
 
       {/* CURRENT STANDINGS */}
-
       <section className="standings-section">
         <div className="section-header">
           <div>
@@ -162,7 +161,6 @@ export function DashboardPage() {
       <hr className="section-divider" />
 
       {/* ALL-TIME HIGHLIGHTS */}
-
       <section className="standings-section">
         <div className="section-header">
           <div>
