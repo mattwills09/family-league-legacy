@@ -1,5 +1,7 @@
 # Current-season ESPN connection
 
+[Architecture](architecture.md) · [Development](development.md) · [Engineering Decisions](engineering-decisions.md)
+
 The dashboard requests `/api/standings` on its own origin. A Vercel Node function fetches ESPN and normalizes its response into `FantasyTeam` objects. Local `npm run dev` serves the same handler through Vite middleware. No React Router or Supabase is required.
 
 ## Local setup
@@ -10,13 +12,13 @@ The dashboard requests `/api/standings` on its own origin. A Vercel Node functio
 4. Restart `npm run dev` after editing environment variables. Open the local Vite URL.
 5. Confirm the ESPN season label, team names, W-L-T records, and points against the ESPN standings page. Use another season by changing `ESPN_SEASON` explicitly.
 
-The initial unauthenticated check for league 684618 in 2026 returned HTTP 401. After the user privately saved credentials in the ignored local environment file, the adapter successfully retrieved 12 teams and a complete ESPN seed order. The browser rendered real records and points (four recorded games per team at verification). Credentials were not displayed or copied into source files. Production verification remains pending Vercel environment setup and deployment.
+Local integration was verified with 12 teams and a complete ESPN seed order. Credentials were not displayed or copied into source files. The deployed connection was subsequently confirmed working after the Vercel TypeScript configuration fix.
 
 ## Vercel setup
 
-Set `ESPN_LEAGUE_ID`, `ESPN_SEASON`, `ESPN_S2`, and `ESPN_SWID` in this project's Vercel environment settings for the environments that should connect to ESPN. Mark credentials sensitive where supported. Redeploy after changing settings; local `.env.local` is never deployed. Vercel serves `api/standings.ts` as a Node function alongside the Vite app.
+Set `ESPN_LEAGUE_ID`, `ESPN_SEASON`, `ESPN_S2`, and `ESPN_SWID` in this project's Vercel environment settings for the environments that should connect to ESPN. Store credentials as Secret variables (Sensitive in older interfaces). Redeploy after changing settings; local `.env.local` is never deployed. Vercel serves `api/standings.ts` as a Node function alongside the Vite app.
 
-The existing public dashboard will expose the normalized team names, owner names, records, and scores when deployed. It does not expose ESPN cookies, member email addresses, rosters, raw responses, or transaction data. If league standings need access control, add that before publishing the connection. This step does not deploy changes.
+The public dashboard exposes normalized team names, owner names, records, and scores. It does not expose ESPN cookies, member email addresses, rosters, raw responses, or transaction data. If league standings need access control, implement that before adding private views.
 
 `npm run preview` is a static production preview and does not run the API; use `npm run dev` for local integration or a Vercel preview deployment for deployment verification.
 
