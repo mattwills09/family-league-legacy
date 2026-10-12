@@ -73,3 +73,9 @@
 - Live verification succeeded for league 684618 / season 2026 after the user saved credentials privately: 12 teams, four recorded games each, complete seed order, and real standings rendered in the browser. No credential values were displayed or added to tracked files.
 - Adapter/error/HTTP tests, ESLint, and TypeScript/Vite build passed. Production deployment remains pending Vercel environment setup. See espn-setup.md for instructions.
 - Keep historical seasons, drafts, transactions, and Supabase for later.
+
+## Vercel TypeScript compilation fix — October 12, 2026
+- Vercel's function compiler reads root tsconfig.json and does not follow the Vite project references. Local checks had server settings in tsconfig.node.json only, allowing a deployment-specific failure.
+- Add Node types and explicit NodeNext/ES2023 server settings at the root. Allow relative TypeScript imports and rewrite their extensions to JavaScript when emitting, retaining native Node TypeScript tests while supporting deployed JavaScript.
+- Add tsconfig.api.json inheriting root options without project references, and run it in the regular build. This checks Vercel-facing settings as well as the frontend/Vite configuration. Keep credentials and UI behavior unchanged.
+- Verified production app build, lint, all five API tests, and JavaScript emission with rewritten .js imports. Ignore generated TypeScript build-info files. Remote Vercel redeployment remains the final verification.
