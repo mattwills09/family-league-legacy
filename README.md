@@ -1,5 +1,9 @@
 # Family League Legacy
 
+## Current-season ESPN connection
+
+The dashboard now loads current teams, standings, and points through a server-only ESPN adapter. See [ESPN setup](docs/espn-setup.md) for local credentials and Vercel environment configuration. Real data has been verified locally for league 684618 / season 2026. Mock data remains an explicit sample fallback; historical data is deferred. Never put ESPN cookies in VITE_ variables.
+
 A modern fantasy football league history and analytics application built with React and TypeScript.
 
 Family League Legacy is designed to centralize current-season standings, long-term league history, championship records, playoff performance, and team-level analytics in a clean, responsive interface.

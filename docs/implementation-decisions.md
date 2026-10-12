@@ -61,3 +61,15 @@
 ## Dashboard section dividers — October 8, 2026
 - Add semantic hr separators after the current-leader/record summary and after the standings table.
 - Use the existing theme border token for subtle lines in both light and dark modes. Split the existing section gap around each divider rather than adding excessive vertical space; reduce spacing on mobile.
+
+## Current-season ESPN adapter — October 12, 2026
+- Adapt to the actual DashboardPage, FantasyTeam, and LeagueSeasonContext architecture. Add no router, database, or runtime dependency.
+- Put ESPN fetching and runtime validation in server/espn.ts. Share the HTTP handler between the Vercel api/standings.ts function and local Vite middleware. Credentials use server environment variables only.
+- Preserve ESPN team IDs; normalize names, co-owners, W-L-T, points for/against, and derived differential. Whitelist dashboard fields rather than forwarding raw member records or ESPN responses.
+- Use complete, unique ESPN playoff seed order when present; retain the existing wins/ties/differential/points sort otherwise.
+- Make historical achievement fields nullable so unknown history does not appear as zero. Current-season data leaves all-time highlights unavailable and previous-season champion null; do not attach mock history to real teams.
+- Load data through an abortable React hook with loading/error/retry states. Retain mockLeagueData as an explicit, labeled sample fallback. Preserve the existing UI cards, table, theme, and disclosure details.
+- Fix the upstream host, league, and season via server settings; refuse redirects, validate cookie header characters, apply a 12-second timeout, sanitize errors, and use no-store responses.
+- Live verification succeeded for league 684618 / season 2026 after the user saved credentials privately: 12 teams, four recorded games each, complete seed order, and real standings rendered in the browser. No credential values were displayed or added to tracked files.
+- Adapter/error/HTTP tests, ESLint, and TypeScript/Vite build passed. Production deployment remains pending Vercel environment setup. See espn-setup.md for instructions.
+- Keep historical seasons, drafts, transactions, and Supabase for later.

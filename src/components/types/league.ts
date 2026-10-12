@@ -8,9 +8,19 @@ export interface FantasyTeam {
     pointsFor: number;
     pointsAgainst: number
     pointDifferential: number;
-    playoffAppearances: number;
-    championshipAppearances: number;
-    championshipsWon: number;
+    playoffAppearances: number | null;
+    championshipAppearances: number | null;
+    championshipsWon: number | null;
+}
+
+export interface LeagueDashboardData {
+    teams: FantasyTeam[];
+    seasonContext: LeagueSeasonContext;
+    season: number;
+    source: 'espn';
+    fetchedAt: string;
+    /** ESPN playoff seeds when complete; otherwise the dashboard uses its existing sort. */
+    standingsTeamIds: number[] | null;
 }
 
 export interface LeagueSeasonContext {

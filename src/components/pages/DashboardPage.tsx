@@ -5,12 +5,38 @@ import {
   ShieldCheck,
   Trophy,
 } from 'lucide-react'
+import { useState } from 'react'
 
 import { DetailCard } from '../DetailCard';
-import { teams, seasonContext } from '../data/mockLeagueData';
+import { teams as sampleTeams, seasonContext as sampleSeasonContext } from '../data/mockLeagueData';
+import { useLeagueDashboard } from '../../hooks/useLeagueDashboard';
 
 export function DashboardPage() {
+  const { state, retry } = useLeagueDashboard()
+  const [showSample, setShowSample] = useState(false)
+  if (state.status !== 'ready' && !showSample) {
+    return (
+      <main className="dashboard">
+        <section className="league-status" aria-live="polite" aria-busy={state.status === 'loading'}>
+          <span className="eyebrow">Current Season</span>
+          <h2>{state.status === 'loading' ? 'Loading league standings…' : 'League standings unavailable'}</h2>
+          {state.status === 'error' && <>
+            <p>{state.message}</p>
+            <div className="league-actions">
+              <button type="button" onClick={retry}>Try again</button>
+              <button type="button" onClick={() => setShowSample(true)}>View sample dashboard</button>
+            </div>
+          </>}
+        </section>
+      </main>
+    )
+  }
+  const liveData = state.status === 'ready' && !showSample ? state.data : null
+  const teams = liveData?.teams ?? sampleTeams
+  const seasonContext = liveData?.seasonContext ?? sampleSeasonContext
+  const officialOrder = liveData?.standingsTeamIds
   const sortedTeams = [...teams].sort((a, b) => {
+    if (officialOrder) return officialOrder.indexOf(a.id) - officialOrder.indexOf(b.id)
     if (b.wins !== a.wins) {
       return b.wins - a.wins
     }
@@ -28,16 +54,20 @@ export function DashboardPage() {
 
   const topTeam = sortedTeams[0]
 
-  const championshipLeader = [...teams].sort((a, b) => {
+  const championshipLeader = [...teams].filter((team) => team.championshipsWon !== null && team.championshipAppearances !== null).sort((a, b) => {
     if (b.championshipsWon !== a.championshipsWon) {
-      return b.championshipsWon - a.championshipsWon
+      return (b.championshipsWon ?? 0) - (a.championshipsWon ?? 0)
     }
 
-    return b.championshipAppearances - a.championshipAppearances
+    return (b.championshipAppearances ?? 0) - (a.championshipAppearances ?? 0)
   })[0]
 
   return (
     <main className="dashboard">
+      <div className="league-source" role="status">
+        {liveData ? `ESPN · ${liveData.season} season · Updated ${new Date(liveData.fetchedAt).toLocaleString()}` : 'Sample dashboard · Illustrative data, not your ESPN league'}
+        {!liveData && <button type="button" onClick={() => { setShowSample(false); retry() }}>Reconnect to ESPN</button>}
+      </div>
       {/* CURRENT SEASON SUMMARY */}
 
       <section className="stats-grid current-stats-grid">
@@ -61,7 +91,7 @@ export function DashboardPage() {
       <section className="standings-section">
         <div className="section-header">
           <div>
-            <span className="eyebrow">Current Season</span>
+            <span className="eyebrow">{liveData ? `${liveData.season} Season` : 'Sample Season'}</span>
             <h2>League Standings</h2>
           </div>
         </div>
@@ -110,7 +140,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <div className="stats-grid legacy-stats-grid">
+        {championshipLeader ? <div className="stats-grid legacy-stats-grid">
           <DetailCard
             label="Championship Leader"
             value={championshipLeader.name}
@@ -119,16 +149,16 @@ export function DashboardPage() {
 
           <DetailCard
             label="League Titles"
-            value={championshipLeader.championshipsWon}
+            value={championshipLeader.championshipsWon ?? 'Not available'}
             icon={ShieldCheck}
           />
 
           <DetailCard
             label="Championship Appearances"
-            value={championshipLeader.championshipAppearances}
+            value={championshipLeader.championshipAppearances ?? 'Not available'}
             icon={Medal}
           />
-        </div>
+        </div> : <p className="history-note">League history has not been connected yet. All-time achievements will appear here when historical seasons are added.</p>}
 
         <hr className="section-divider" />
 
@@ -137,12 +167,12 @@ export function DashboardPage() {
             .slice()
             .sort((a, b) => {
               if (b.championshipsWon !== a.championshipsWon) {
-                return b.championshipsWon - a.championshipsWon
+                return (b.championshipsWon ?? 0) - (a.championshipsWon ?? 0)
               }
 
               return (
-                b.championshipAppearances -
-                a.championshipAppearances
+                (b.championshipAppearances ?? 0) -
+                (a.championshipAppearances ?? 0)
               )
             })
             .map((team) => (
@@ -163,15 +193,15 @@ export function DashboardPage() {
                 <div className="legacy-stats">
                   <div>
                     <span>Playoff Appearances</span>
-                    <strong>{team.playoffAppearances}</strong>
+                    <strong>{team.playoffAppearances ?? 'Not available'}</strong>
                   </div>
                   <div>
                     <span>Championship Appearances</span>
-                    <strong>{team.championshipAppearances}</strong>
+                    <strong>{team.championshipAppearances ?? 'Not available'}</strong>
                   </div>
                   <div>
                     <span>Championships</span>
-                    <strong>{team.championshipsWon}</strong>
+                    <strong>{team.championshipsWon ?? 'Not available'}</strong>
                   </div>
                 </div>
                 <details className="team-details">
@@ -182,7 +212,7 @@ export function DashboardPage() {
                     <div><dt>Points For</dt><dd>{team.pointsFor.toFixed(1)}</dd></div>
                     <div><dt>Points Against</dt><dd>{team.pointsAgainst.toFixed(1)}</dd></div>
                     <div><dt>Win Percentage</dt><dd>{team.wins + team.losses + team.ties === 0 ? 'No games played' : `${(((team.wins + team.ties / 2) / (team.wins + team.losses + team.ties)) * 100).toFixed(1)}%`}</dd></div>
-                    <div><dt>Championships Won</dt><dd>{team.championshipAppearances === 0 ? 'No appearances' : `${team.championshipsWon} of ${team.championshipAppearances}`}</dd></div>
+                    <div><dt>Championships Won</dt><dd>{team.championshipAppearances === null || team.championshipsWon === null ? 'Not available' : team.championshipAppearances === 0 ? 'No appearances' : `${team.championshipsWon} of ${team.championshipAppearances}`}</dd></div>
                   </dl>
                 </details>
               </article>
