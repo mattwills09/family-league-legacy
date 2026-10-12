@@ -2,7 +2,7 @@
 
 .league-status { padding: 24px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
 .league-status p, .league-source, .history-note { color: var(--text-secondary); }
-.league-source { font-size: 0.875rem; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.league-source { font-size: 0.875rem; display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 8px; }
 .league-actions { display: flex; flex-wrap: wrap; gap: 12px; }
 .league-actions button, .league-source button { font: inherit; padding: 10px 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--text-primary); cursor: pointer; }
 .league-actions button:hover, .league-source button:hover { background: var(--surface-hover); }
@@ -735,7 +735,12 @@ a {
 .standings-data th { font-size: 0.875rem; font-weight: 600; }
 .standings-data td { font-size: 1rem; font-weight: 500; }
 .standings-data th:nth-child(n+4), .standings-data td:nth-child(n+4) { text-align: right; white-space: nowrap; }
-.standings-data tbody tr:first-child { background: var(--accent-soft); }
+.standings-data tbody tr.standings-leader { background: var(--accent-soft); }
+.standings-sort { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 6px 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.standings-sort svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-muted); }
+.standings-data th[aria-sort] .standings-sort svg { color: var(--accent); }
+.standings-sort:hover { color: var(--accent); }
+.standings-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
 .standings-data tbody tr:hover { background: var(--surface-hover); }
 .standings-data tbody tr:last-child td { border-bottom: none; }
 .standings-table:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }

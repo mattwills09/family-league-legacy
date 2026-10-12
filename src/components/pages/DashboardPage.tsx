@@ -4,16 +4,32 @@ import {
   Medal,
   ShieldCheck,
   Trophy,
+  ArrowUpDown,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react'
 import { useState } from 'react'
 
 import { DetailCard } from '../DetailCard';
 import { teams as sampleTeams, seasonContext as sampleSeasonContext } from '../data/mockLeagueData';
 import { useLeagueDashboard } from '../../hooks/useLeagueDashboard';
+import { defaultDirection, sortStandings } from '../data/standingsSort';
+import type { StandingsColumn, StandingsSort } from '../data/standingsSort';
+
+const standingsColumns: { key: StandingsColumn; label: string; title?: string }[] = [
+  { key: 'rank', label: 'Rank' },
+  { key: 'name', label: 'Team' },
+  { key: 'owner', label: 'Owner' },
+  { key: 'record', label: 'Record', title: 'Wins-losses-ties; sorted by win percentage' },
+  { key: 'pointsFor', label: 'PF', title: 'Points for' },
+  { key: 'pointsAgainst', label: 'PA', title: 'Points against' },
+  { key: 'pointDifferential', label: 'Diff', title: 'Point differential' },
+]
 
 export function DashboardPage() {
   const { state, retry } = useLeagueDashboard()
   const [showSample, setShowSample] = useState(false)
+  const [tableSort, setTableSort] = useState<StandingsSort>({ column: 'rank', direction: 'ascending' })
   if (state.status !== 'ready' && !showSample) {
     return (
       <main className="dashboard">
@@ -53,6 +69,17 @@ export function DashboardPage() {
   })
 
   const topTeam = sortedTeams[0]
+  const ranks = new Map(sortedTeams.map((team, index) => [team.id, index + 1]))
+  const tableTeams = sortStandings(teams, ranks, tableSort)
+
+  function changeSort(column: StandingsColumn) {
+    setTableSort((current) => ({
+      column,
+      direction: current.column === column
+        ? current.direction === 'ascending' ? 'descending' : 'ascending'
+        : defaultDirection(column),
+    }))
+  }
 
   const championshipLeader = [...teams].filter((team) => team.championshipsWon !== null && team.championshipAppearances !== null).sort((a, b) => {
     if (b.championshipsWon !== a.championshipsWon) {
@@ -100,19 +127,23 @@ export function DashboardPage() {
           <table className="standings-data" aria-label="Current season league standings">
             <thead>
               <tr>
-                <th scope="col">Rank</th>
-                <th scope="col">Team</th>
-                <th scope="col">Owner</th>
-                <th scope="col"><abbr title="Wins-losses-ties">Record</abbr></th>
-                <th scope="col"><abbr title="Points for">PF</abbr></th>
-                <th scope="col"><abbr title="Points against">PA</abbr></th>
-                <th scope="col"><abbr title="Point differential">Diff</abbr></th>
+                {standingsColumns.map((column) => {
+                  const active = tableSort.column === column.key
+                  const nextDirection = active ? tableSort.direction === 'ascending' ? 'descending' : 'ascending' : defaultDirection(column.key)
+                  const SortIcon = active ? tableSort.direction === 'ascending' ? ChevronUp : ChevronDown : ArrowUpDown
+                  return <th key={column.key} scope="col" aria-sort={active ? tableSort.direction : undefined}>
+                    <button className="standings-sort" type="button" onClick={() => changeSort(column.key)} aria-label={`${column.title ?? column.label}: sort ${nextDirection}`}>
+                      {column.title ? <abbr title={column.title}>{column.label}</abbr> : column.label}
+                      <SortIcon aria-hidden="true" />
+                    </button>
+                  </th>
+                })}
               </tr>
             </thead>
             <tbody>
-              {sortedTeams.map((team, index) => (
-                <tr key={team.id}>
-                  <td>{index + 1}</td>
+              {tableTeams.map((team) => (
+                <tr key={team.id} className={team.id === topTeam.id ? 'standings-leader' : undefined}>
+                  <td>{ranks.get(team.id)}</td>
                   <td><strong>{team.name}</strong></td>
                   <td>{team.owner}</td>
                   <td>{team.wins}-{team.losses}-{team.ties}</td>
@@ -208,7 +239,7 @@ export function DashboardPage() {
                   <summary>View team details</summary>
                   <dl className="team-details-grid">
                     <div><dt>Current Record</dt><dd>{team.wins}-{team.losses}-{team.ties}</dd></div>
-                    <div><dt>Standings Rank</dt><dd>{sortedTeams.findIndex((entry) => entry.id === team.id) + 1}</dd></div>
+                    <div><dt>Standings Rank</dt><dd>{ranks.get(team.id)}</dd></div>
                     <div><dt>Points For</dt><dd>{team.pointsFor.toFixed(1)}</dd></div>
                     <div><dt>Points Against</dt><dd>{team.pointsAgainst.toFixed(1)}</dd></div>
                     <div><dt>Win Percentage</dt><dd>{team.wins + team.losses + team.ties === 0 ? 'No games played' : `${(((team.wins + team.ties / 2) / (team.wins + team.losses + team.ties)) * 100).toFixed(1)}%`}</dd></div>

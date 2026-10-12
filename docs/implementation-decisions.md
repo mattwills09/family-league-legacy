@@ -79,3 +79,9 @@
 - Add Node types and explicit NodeNext/ES2023 server settings at the root. Allow relative TypeScript imports and rewrite their extensions to JavaScript when emitting, retaining native Node TypeScript tests while supporting deployed JavaScript.
 - Add tsconfig.api.json inheriting root options without project references, and run it in the regular build. This checks Vercel-facing settings as well as the frontend/Vite configuration. Keep credentials and UI behavior unchanged.
 - Verified production app build, lint, all five API tests, and JavaScript emission with rewritten .js imports. Ignore generated TypeScript build-info files. Remote Vercel redeployment remains the final verification.
+
+## Sortable standings — October 12, 2026
+- Add native header buttons for Rank, Team, Owner, Record, PF, PA, and Diff. Clicking toggles direction; Rank and text start ascending, statistics start descending. Indicate the active column with aria-sort and a directional icon.
+- Sort table rows only. Official rank labels, current-leader summary, leader highlight, and expanded team ranks remain tied to ESPN standings (or the existing fallback ranking), independent of display order.
+- Record sorts numerically by win percentage, with half-credit for ties and a no-games guard; compare wins, losses, and ties for equal percentages. Team/owner sorting ignores case and handles numbers naturally. Equal values retain official rank order.
+- Keep sorting local without mutating the source data or fetching ESPN again. Verify every column in both directions, tie ordering, numeric record comparison, and preserved ranks.
