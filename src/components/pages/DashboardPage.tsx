@@ -72,6 +72,18 @@ export function DashboardPage() {
   const ranks = new Map(sortedTeams.map((team, index) => [team.id, index + 1]))
   const tableTeams = sortStandings(teams, ranks, tableSort)
 
+  function toTitleCase(str: string): string {
+    const titleCase = str
+      .toLowerCase()
+      .split(' ')
+      .map((word: string) => {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ');
+
+    return titleCase;
+  }
+
   function changeSort(column: StandingsColumn) {
     setTableSort((current) => ({
       column,
@@ -143,7 +155,7 @@ export function DashboardPage() {
               {tableTeams.map((team) => (
                 <tr key={team.id} className={team.id === topTeam.id ? 'standings-leader' : undefined}>
                   <td>{ranks.get(team.id)}</td>
-                  <td><strong>{team.name}</strong></td>
+                  <td><strong>{toTitleCase(team.name)}</strong></td>
                   <td>{team.owner}</td>
                   <td>{team.wins}-{team.losses}-{team.ties}</td>
                   <td>{team.pointsFor.toFixed(1)}</td>
