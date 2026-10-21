@@ -156,7 +156,7 @@ export function DashboardPage() {
                 <tr key={team.id} className={team.id === topTeam.id ? 'standings-leader' : undefined}>
                   <td>{ranks.get(team.id)}</td>
                   <td><strong>{toTitleCase(team.name)}</strong></td>
-                  <td>{team.owner}</td>
+                  <td>{toTitleCase(team.owner)}</td>
                   <td>{team.wins}-{team.losses}-{team.ties}</td>
                   <td>{team.pointsFor.toFixed(1)}</td>
                   <td>{team.pointsAgainst.toFixed(1)}</td>
