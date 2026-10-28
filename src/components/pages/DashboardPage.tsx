@@ -80,6 +80,9 @@ export function DashboardPage() {
   })
 
   const topTeam = sortedTeams[0]
+  const isPastSeason = liveData !== null && liveData.season < liveData.currentSeason
+  const seasonChampionId = isPastSeason ? liveData.seasonChampion?.teamId : undefined
+  const highlightedTeamId = isPastSeason ? seasonChampionId : topTeam.id
   const ranks = new Map(sortedTeams.map((team, index) => [team.id, index + 1]))
   const tableTeams = sortStandings(teams, ranks, tableSort)
 
@@ -170,9 +173,13 @@ export function DashboardPage() {
             </thead>
             <tbody>
               {tableTeams.map((team) => (
-                <tr key={team.id} className={team.id === topTeam.id ? 'standings-leader' : undefined}>
+                <tr key={team.id} className={team.id === highlightedTeamId ? 'standings-highlight' : undefined}>
                   <td>{ranks.get(team.id)}</td>
-                  <td><strong>{toTitleCase(team.name)}</strong></td>
+                  <td><span className="standings-team-name"><strong>{toTitleCase(team.name)}</strong>
+                    {team.id === seasonChampionId && <span role="img" aria-label={`${liveData?.season} season champion`} title={`${liveData?.season} season champion`}>
+                      <Trophy className="icon icon-accent" aria-hidden="true" />
+                    </span>}
+                  </span></td>
                   <td>{toTitleCase(team.owner)}</td>
                   <td>{team.wins}-{team.losses}-{team.ties}</td>
                   <td>{team.pointsFor.toFixed(1)}</td>

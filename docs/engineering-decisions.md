@@ -89,3 +89,5 @@ Key tradeoffs behind the current implementation. This document describes the res
 For league 684618, the 2025 final was verified from ESPN and confirmed by the league owner: uncle rico's defeated Hail Mama!, 94.2–77.3. No champion ID is hard-coded into the application.
 
 Validation: ten automated tests, lint, and the production build passed. Live adapter checks returned 12 teams in each season, champion ID 10 for 2025, and the matching previous-season badge for 2026. Browser checks confirmed switching seasons, the historical final, regular-season labels, and a single 2026 badge; 2025 does not invent a 2024 champion. Deployment verification remains separate.
+
+Past-season tables highlight the verified playoff champion, with an accessible season-specific trophy beside the team name. Current-season tables highlight the standings leader. Both highlights remain attached to team identity when rows are sorted; a past season without a verified champion has no highlighted row. Rank labels and the regular-season leader summary remain unchanged. The historical table trophy is distinct from the previous-season champion badge on current team cards.
