@@ -77,3 +77,15 @@ Key tradeoffs behind the current implementation. This document describes the res
 **Decision:** Put required server compiler options in the root configuration and add `tsconfig.api.json` to the regular build. Enable emitted import-extension rewriting while preserving native TypeScript tests.
 
 **Tradeoff:** There is an additional configuration to maintain. It makes deployment assumptions explicit, though successful deployment and runtime verification are still separate from local checks.
+
+## First Historical Season and Champion Identity
+
+**Problem:** Regular-season seeds do not identify the playoff champion. Team IDs may also be reassigned between seasons.
+
+**Decision:** Offer the configured season and the immediately preceding season. Request ESPN settings and matchup scores for the historical year, require a completed season and a unique final-period winners-bracket game, and use ESPN's declared winner (including tied scores resolved by its tiebreaker). Display historical standings as regular-season results and the championship separately. Award the prior-champion badge only when team and owner IDs match across years.
+
+**Tradeoff:** Older seasons and changed-ownership cases need further identity work. Historical failures suppress the optional badge without breaking current standings. The first historical season does not establish all-time totals or the champion of the year before it.
+
+For league 684618, the 2025 final was verified from ESPN and confirmed by the league owner: uncle rico's defeated Hail Mama!, 94.2–77.3. No champion ID is hard-coded into the application.
+
+Validation: ten automated tests, lint, and the production build passed. Live adapter checks returned 12 teams in each season, champion ID 10 for 2025, and the matching previous-season badge for 2026. Browser checks confirmed switching seasons, the historical final, regular-season labels, and a single 2026 badge; 2025 does not invent a 2024 champion. Deployment verification remains separate.

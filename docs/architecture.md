@@ -19,7 +19,7 @@ flowchart LR
 
 The browser calls its own origin. On Vercel, `api/standings.ts` exposes a Node function; locally, Vite middleware serves the same handler. `server/espn.ts` fetches and validates ESPN data before returning a limited set of dashboard fields.
 
-The hook loads data when the dashboard mounts or is retried. There is no automatic polling, database, or persistent server cache in the current milestone.
+The hook loads data when the dashboard mounts, the selected season changes, or a request is retried. There is no automatic polling, database, or persistent server cache in the current milestone.
 
 ## Repository Structure
 
@@ -54,7 +54,9 @@ tests/                                Adapter, HTTP, and sorting tests
 
 TypeScript defines the application contract; runtime validation checks upstream JSON. ESPN team IDs are preserved, owner IDs are resolved into display names, and raw member records are discarded.
 
-Current-season data cannot establish lifetime playoff appearances or championships. Those values are `null`, displayed as unavailable. The previous-season champion remains unset until the preceding season's result is supplied.
+Current-season data cannot establish lifetime playoff appearances or championships. Those values remain `null`, displayed as unavailable. A historical season includes an optional championship summary, separate from regular-season order. A completed preceding-season final establishes the current dashboard's previous-champion badge only when team and owner IDs match.
+
+`/api/standings?season=2025` selects the historical season when `ESPN_SEASON=2026`. The server restricts selection to the configured season and its predecessor. Earlier seasons, including the year before that historical selection, are not fetched in this milestone. Settings and `mMatchupScore` are needed to distinguish the championship from consolation games; regular standings alone are insufficient.
 
 ## Ranking and Display Sorting
 

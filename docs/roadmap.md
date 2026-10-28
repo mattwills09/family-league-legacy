@@ -16,15 +16,16 @@ Current capabilities and intended next steps. Future items describe direction ra
 - Persistent light/dark themes, responsive layouts, and semantic interactive controls
 - Automated adapter, HTTP-boundary, and sorting tests
 - Vercel deployment with frontend and function TypeScript checks
+- Current/previous-season selection, a separate completed-season championship summary, and the preceding champion badge when identity matches
 
 ## Next: Verified League History
 
 - Establish which seasons are available and validate historical ESPN results.
 - Resolve team and owner identity across seasons, including renamed teams and ownership changes.
-- Add season selection and historical standings.
+- Expand the initial two-season selector to older verified seasons.
 - Populate playoff appearances, championship appearances, titles, and the preceding season's champion from verified results.
 
-Current-season standings do not fill these historical fields. The dashboard identifies them as unavailable today.
+The first completed season establishes its championship result; lifetime totals remain unavailable until broader historical coverage and identity mapping are verified.
 
 ## Later: Navigation and Persistence
 

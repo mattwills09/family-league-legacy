@@ -28,9 +28,9 @@ The public dashboard exposes normalized team names, owner names, records, and sc
 - ESPN IDs are preserved. The adapter handles current `name` and older `location` / `nickname` fields, and resolves co-owners from member IDs without publishing member records.
 - W-L-T and points use `record.overall`. Missing records fail validation rather than becoming fictitious zeroes. Genuine zero records remain valid.
 - Complete, unique ESPN playoff seeds provide standings order. When seeds are unavailable, the existing wins, ties, differential, points-for sort is retained.
-- Historical achievement fields are nullable. Current-season data cannot prove lifetime playoff appearances or titles, and the previous-season champion remains null.
+- Historical achievement fields remain nullable; one completed season does not establish lifetime totals. The selector offers the configured year and its predecessor. A completed winners-bracket final establishes the historical championship result and the current year's prior-champion badge when owner IDs match.
 - The browser shows loading, error, retry, and an explicitly labeled sample-dashboard fallback. Live standings never mix with mock all-time achievements. No automatic polling or credential persistence in the browser.
-- Only a fixed ESPN endpoint is called; user query strings cannot change league, season, or host. Requests time out after 12 seconds and redirects are refused. Error bodies are sanitized, and responses use `Cache-Control: no-store`.
+- Only a fixed ESPN host and configured league are called. The optional season query is restricted to the configured year and its predecessor. Each upstream request times out after 12 seconds and refuses redirects. Error bodies are sanitized, and responses use `Cache-Control: no-store`.
 
 ## Validation
 

@@ -27,14 +27,25 @@ const standingsColumns: { key: StandingsColumn; label: string; title?: string }[
 ]
 
 export function DashboardPage() {
-  const { state, retry } = useLeagueDashboard()
+  const { state, retry, selectSeason, seasonOptions, selectedSeason } = useLeagueDashboard()
   const [showSample, setShowSample] = useState(false)
   const [tableSort, setTableSort] = useState<StandingsSort>({ column: 'rank', direction: 'ascending' })
+  const seasonPicker = seasonOptions && <div className="season-picker">
+    <label htmlFor="league-season">Season</label>
+    <select id="league-season" value={selectedSeason ?? seasonOptions.current} onChange={(event) => {
+      setShowSample(false)
+      setTableSort({ column: 'rank', direction: 'ascending' })
+      selectSeason(Number(event.target.value))
+    }}>
+      {seasonOptions.available.map((season) => <option key={season} value={season}>{season}{season === seasonOptions.current ? ' · Current' : ''}</option>)}
+    </select>
+  </div>
   if (state.status !== 'ready' && !showSample) {
     return (
       <main className="dashboard">
+        {seasonPicker}
         <section className="league-status" aria-live="polite" aria-busy={state.status === 'loading'}>
-          <span className="eyebrow">Current Season</span>
+          <span className="eyebrow">{selectedSeason ?? 'ESPN'} Season</span>
           <h2>{state.status === 'loading' ? 'Loading league standings…' : 'League standings unavailable'}</h2>
           {state.status === 'error' && <>
             <p>{state.message}</p>
@@ -103,6 +114,7 @@ export function DashboardPage() {
 
   return (
     <main className="dashboard">
+      {seasonPicker}
       <div className="league-source" role="status">
         {liveData ? `ESPN · ${liveData.season} season · Updated ${new Date(liveData.fetchedAt).toLocaleString()}` : 'Sample dashboard · Illustrative data, not your ESPN league'}
         {!liveData && <button type="button" onClick={() => { setShowSample(false); retry() }}>Reconnect to ESPN</button>}
@@ -111,7 +123,7 @@ export function DashboardPage() {
       {/* CURRENT SEASON SUMMARY */}
       <section className="stats-grid current-stats-grid">
         <DetailCard
-          label="Current Leader"
+          label={liveData && liveData.season !== liveData.currentSeason ? 'Regular-Season Leader' : 'Current Leader'}
           value={topTeam.name}
           icon={Trophy}
         />
@@ -126,16 +138,21 @@ export function DashboardPage() {
       <hr className="section-divider" />
 
       {/* CURRENT STANDINGS */}
+      {liveData?.seasonChampion && <section className="league-status" aria-label={`${liveData.season} championship result`}>
+        <span className="eyebrow">{liveData.season} Champion</span>
+        <h2>{liveData.seasonChampion.teamName}</h2>
+        <p>Defeated {liveData.seasonChampion.runnerUpName} · {liveData.seasonChampion.winningPoints.toFixed(1)}–{liveData.seasonChampion.runnerUpPoints.toFixed(1)}</p>
+      </section>}
       <section className="standings-section">
         <div className="section-header">
           <div>
             <span className="eyebrow">{liveData ? `${liveData.season} Season` : 'Sample Season'}</span>
-            <h2>League Standings</h2>
+            <h2>{liveData && liveData.season !== liveData.currentSeason ? 'Regular-Season Standings' : 'League Standings'}</h2>
           </div>
         </div>
 
         <div className="standings-table" role="region" aria-label="League standings, scroll horizontally for all statistics" tabIndex={0}>
-          <table className="standings-data" aria-label="Current season league standings">
+          <table className="standings-data" aria-label={`${liveData?.season ?? 'Sample'} season league standings`}>
             <thead>
               <tr>
                 {standingsColumns.map((column) => {
@@ -199,7 +216,7 @@ export function DashboardPage() {
             value={championshipLeader.championshipAppearances ?? 'Not available'}
             icon={Medal}
           />
-        </div> : <p className="history-note">League history has not been connected yet. All-time achievements will appear here when historical seasons are added.</p>}
+        </div> : <p className="history-note">All-time achievements have not been calculated yet. Verified totals will appear here as historical season coverage expands.</p>}
 
         <hr className="section-divider" />
 
@@ -248,7 +265,7 @@ export function DashboardPage() {
                 <details className="team-details">
                   <summary>View team details</summary>
                   <dl className="team-details-grid">
-                    <div><dt>Current Record</dt><dd>{team.wins}-{team.losses}-{team.ties}</dd></div>
+                    <div><dt>{liveData && liveData.season !== liveData.currentSeason ? 'Season Record' : 'Current Record'}</dt><dd>{team.wins}-{team.losses}-{team.ties}</dd></div>
                     <div><dt>Standings Rank</dt><dd>{ranks.get(team.id)}</dd></div>
                     <div><dt>Points For</dt><dd>{team.pointsFor.toFixed(1)}</dd></div>
                     <div><dt>Points Against</dt><dd>{team.pointsAgainst.toFixed(1)}</dd></div>

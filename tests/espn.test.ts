@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { fetchEspnLeague, normalizeEspnLeague } from '../server/espn.ts'
+import { fetchEspnLeague, normalizeEspnLeague, readSeasonChampion } from '../server/espn.ts'
 import { handleStandings } from '../server/standings-handler.ts'
 
 const fixture = {
@@ -13,6 +13,52 @@ const fixture = {
   ],
 }
 const env = { ESPN_LEAGUE_ID: '684618', ESPN_SEASON: '2026', ESPN_S2: 'test-only-s2', ESPN_SWID: '{test-only-swid}' }
+
+const historical = {
+  ...structuredClone(fixture), seasonId: 2025, scoringPeriodId: 19,
+  status: { finalScoringPeriod: 17 },
+  settings: { scheduleSettings: { matchupPeriods: { '15': [15], '16': [16], '17': [17] } } },
+  schedule: [
+    { matchupPeriodId: 16, playoffTierType: 'WINNERS_BRACKET', winner: 'AWAY', home: { teamId: 12, totalPoints: 150 }, away: { teamId: 7, totalPoints: 160 } },
+    { matchupPeriodId: 17, playoffTierType: 'WINNERS_BRACKET', winner: 'HOME', home: { teamId: 7, totalPoints: 94.2 }, away: { teamId: 12, totalPoints: 77.3 } },
+    { matchupPeriodId: 17, playoffTierType: 'WINNERS_CONSOLATION_LADDER', winner: 'HOME', home: { teamId: 12, totalPoints: 200 }, away: { teamId: 7, totalPoints: 100 } },
+  ],
+}
+
+test('champion comes from completed winners-bracket final, not regular-season seed or consolation', () => {
+  assert.deepEqual(readSeasonChampion(historical), { teamId: 7, teamName: 'Example Team', runnerUpName: 'Old Name', winningPoints: 94.2, runnerUpPoints: 77.3 })
+  assert.equal(readSeasonChampion({ ...historical, scoringPeriodId: 17 }), null)
+  assert.equal(readSeasonChampion({ ...historical, schedule: [] }), null)
+  assert.equal(readSeasonChampion({ ...historical, schedule: [{ ...historical.schedule[1], home: null }] }), null)
+  assert.equal(readSeasonChampion({ ...historical, schedule: [...historical.schedule, historical.schedule[1]] }), null)
+  assert.equal(readSeasonChampion({ ...historical, schedule: [{ ...historical.schedule[1], winner: 'UNDECIDED' }] }), null)
+  const tiedFinal = { ...historical.schedule[1], away: { teamId: 12, totalPoints: 94.2 } }
+  assert.equal(readSeasonChampion({ ...historical, schedule: [tiedFinal] })?.teamId, 7)
+})
+
+test('season selection and prior champion keep history out of lifetime totals', async () => {
+  const fetcher: typeof fetch = async (input) => Response.json(String(input).includes('/2025/') ? historical : fixture)
+  const current = await fetchEspnLeague(env, fetcher)
+  assert.deepEqual(current.availableSeasons, [2026, 2025])
+  assert.equal(current.seasonContext.previousSeasonChampionTeamId, 7)
+  assert.equal(current.seasonChampion, null)
+  const previous = await fetchEspnLeague(env, fetcher, 2025)
+  assert.equal(previous.season, 2025)
+  assert.equal(previous.currentSeason, 2026)
+  assert.equal(previous.seasonChampion?.teamId, 7)
+  assert.equal(previous.seasonContext.previousSeasonChampionTeamId, null)
+  assert.ok(previous.teams.every((team) => team.championshipsWon === null))
+})
+
+test('unavailable history and ownership changes suppress the badge without breaking current standings', async () => {
+  const missing: typeof fetch = async (input) => String(input).includes('/2025/') ? new Response('', { status: 404 }) : Response.json(fixture)
+  assert.equal((await fetchEspnLeague(env, missing)).seasonContext.previousSeasonChampionTeamId, null)
+  const changed = structuredClone(historical)
+  changed.teams[0].owners = ['new-owner']
+  const reassigned: typeof fetch = async (input) => Response.json(String(input).includes('/2025/') ? changed : fixture)
+  assert.equal((await fetchEspnLeague(env, reassigned)).seasonContext.previousSeasonChampionTeamId, null)
+  await assert.rejects(fetchEspnLeague(env, missing, 2024), /current or previous/)
+})
 
 test('maps actual IDs, ties, scores, names, co-owners, seeds; leaves history unknown', () => {
   const data = normalizeEspnLeague(fixture, 684618, 2026)
@@ -69,5 +115,9 @@ test('HTTP boundary rejects POST and never echoes credentials in configuration e
     assert.equal(response.status, 503)
     assert.equal(response.headers.get('cache-control'), 'no-store')
     assert.deepEqual(await response.json(), { error: 'League connection is not configured yet.' })
+    for (const query of ['?season=hello', '?season=2025&season=2026']) {
+      const invalid = await fetch(url + query)
+      assert.equal(invalid.status, 400)
+    }
   } finally { await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())) }
 })

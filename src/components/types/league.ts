@@ -21,6 +21,17 @@ export interface LeagueDashboardData {
     fetchedAt: string;
     /** ESPN playoff seeds when complete; otherwise the dashboard uses its existing sort. */
     standingsTeamIds: number[] | null;
+    currentSeason: number;
+    availableSeasons: number[];
+    seasonChampion: SeasonChampion | null;
+}
+
+export interface SeasonChampion {
+    teamId: number;
+    teamName: string;
+    runnerUpName: string;
+    winningPoints: number;
+    runnerUpPoints: number;
 }
 
 export interface LeagueSeasonContext {

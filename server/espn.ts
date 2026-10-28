@@ -1,4 +1,4 @@
-import type { LeagueDashboardData } from '../src/components/types/league.ts'
+import type { LeagueDashboardData, SeasonChampion } from '../src/components/types/league.ts'
 
 type JsonObject = Record<string, unknown>
 
@@ -79,6 +79,9 @@ export function normalizeEspnLeague(payload: unknown, leagueId: number, season: 
     seasonContext: { previousSeasonChampionTeamId: null },
     season,
     source: 'espn',
+    currentSeason: season,
+    availableSeasons: [season],
+    seasonChampion: null,
     fetchedAt: new Date().toISOString(),
     standingsTeamIds: seeds.size === teams.length && new Set(seeds.values()).size === teams.length
       ? [...teams].sort((a, b) => seeds.get(a.id)! - seeds.get(b.id)!).map((team) => team.id)
@@ -86,40 +89,108 @@ export function normalizeEspnLeague(payload: unknown, leagueId: number, season: 
   }
 }
 
-export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fetch = fetch): Promise<LeagueDashboardData> {
+/** Require a completed season and a unique championship final, not the regular-season seed. */
+export function readSeasonChampion(payload: unknown): SeasonChampion | null {
+  try { return parseSeasonChampion(payload) } catch { return null }
+}
+
+function parseSeasonChampion(payload: unknown): SeasonChampion | null {
+  const league = object(payload)
+  const settings = object(league.settings ?? {})
+  const scheduleSettings = object(settings.scheduleSettings ?? {})
+  const status = object(league.status ?? {})
+  if (typeof status.finalScoringPeriod !== 'number' || typeof league.scoringPeriodId !== 'number' || league.scoringPeriodId <= status.finalScoringPeriod) return null
+  if (!Array.isArray(league.schedule) || !Array.isArray(league.teams)) return null
+  const periods = Object.keys(object(scheduleSettings.matchupPeriods ?? {})).map(Number).filter(Number.isFinite)
+  if (!periods.length) return null
+  const lastPeriod = Math.max(...periods)
+  const finals = league.schedule.map(object).filter((game) => game.playoffTierType === 'WINNERS_BRACKET' && game.matchupPeriodId === lastPeriod)
+  if (finals.length !== 1) return null
+  const final = finals[0]
+  if (final.winner !== 'HOME' && final.winner !== 'AWAY') return null
+  const home = object(final.home)
+  const away = object(final.away)
+  if (home.teamId === away.teamId) return null
+  const winner = final.winner === 'HOME' ? home : away
+  const runnerUp = final.winner === 'HOME' ? away : home
+  const team = league.teams.map(object).find((entry) => entry.id === winner.teamId)
+  const opponent = league.teams.map(object).find((entry) => entry.id === runnerUp.teamId)
+  if (!team || !opponent) return null
+  const name = (entry: JsonObject) => text(entry.name) || [text(entry.location), text(entry.nickname)].filter(Boolean).join(' ') || `Team ${entry.id}`
+  return { teamId: number(team.id, true), teamName: name(team), runnerUpName: name(opponent), winningPoints: number(winner.totalPoints), runnerUpPoints: number(runnerUp.totalPoints) }
+}
+
+function sameOwners(current: unknown, previous: unknown, teamId: number): boolean {
+  const owners = (payload: unknown) => {
+    const league = object(payload)
+    if (!Array.isArray(league.teams)) return []
+    const team = league.teams.map(object).find((entry) => entry.id === teamId)
+    return Array.isArray(team?.owners) ? team.owners.filter((id): id is string => typeof id === 'string').sort() : []
+  }
+  const a = owners(current)
+  const b = owners(previous)
+  return a.length > 0 && a.length === b.length && a.every((id, index) => id === b[index])
+}
+
+export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fetch = fetch, requestedSeason?: number): Promise<LeagueDashboardData> {
   const leagueId = Number(env.ESPN_LEAGUE_ID)
-  const season = Number(env.ESPN_SEASON)
-  if (!Number.isSafeInteger(leagueId) || leagueId <= 0 || !Number.isInteger(season) || season < 2018 || season > 2100) {
+  const currentSeason = Number(env.ESPN_SEASON)
+  if (!Number.isSafeInteger(leagueId) || leagueId <= 0 || !Number.isInteger(currentSeason) || currentSeason < 2019 || currentSeason > 2100) {
     throw new LeagueDataError(503, 'League connection is not configured yet.')
   }
   const s2 = env.ESPN_S2?.trim()
+  const availableSeasons = [currentSeason, currentSeason - 1]
+  const season = requestedSeason ?? currentSeason
+  if (!availableSeasons.includes(season)) throw new LeagueDataError(400, 'Select the current or previous season.')
   const swid = env.ESPN_SWID?.trim()
   if (Boolean(s2) !== Boolean(swid) || [s2, swid].some((value) => value && /[\r\n;]/.test(value))) {
     throw new LeagueDataError(503, 'League credentials need to be configured on the server.')
   }
-  const url = new URL(`https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${season}/segments/0/leagues/${leagueId}`)
-  url.searchParams.append('view', 'mTeam')
-  url.searchParams.append('view', 'mStandings')
-  let response: Response
-  try {
-    response = await fetcher(url, {
-      headers: s2 && swid ? { Cookie: `espn_s2=${s2}; SWID=${swid}`, Accept: 'application/json' } : { Accept: 'application/json' },
-      signal: AbortSignal.timeout(12_000),
-      redirect: 'error',
-    })
-  } catch {
-    throw new LeagueDataError(502, 'ESPN is temporarily unavailable. Try again later.')
+  async function readSeason(year: number, playoffs: boolean): Promise<unknown> {
+    const url = new URL(`https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}/segments/0/leagues/${leagueId}`)
+    url.searchParams.append('view', 'mTeam')
+    url.searchParams.append('view', 'mStandings')
+    if (playoffs) {
+      url.searchParams.append('view', 'mSettings')
+      url.searchParams.append('view', 'mMatchupScore')
+    }
+    let response: Response
+    try {
+      response = await fetcher(url, {
+        headers: s2 && swid ? { Cookie: `espn_s2=${s2}; SWID=${swid}`, Accept: 'application/json' } : { Accept: 'application/json' },
+        signal: AbortSignal.timeout(12_000),
+        redirect: 'error',
+      })
+    } catch {
+      throw new LeagueDataError(502, 'ESPN is temporarily unavailable. Try again later.')
+    }
+    if (response.status === 401 || response.status === 403) {
+      throw new LeagueDataError(503, 'ESPN access needs attention. Check the server-side league credentials.')
+    }
+    if (response.status === 404) {
+      throw new LeagueDataError(503, 'The configured ESPN league or season was not found.')
+    }
+    if (!response.ok) throw new LeagueDataError(502, 'ESPN is temporarily unavailable. Try again later.')
+    let payload: unknown
+    try { payload = await response.json() } catch {
+      throw new LeagueDataError(502, 'ESPN returned incomplete league data. Try again later.')
+    }
+    normalizeEspnLeague(payload, leagueId, year)
+    return payload
   }
-  if (response.status === 401 || response.status === 403) {
-    throw new LeagueDataError(503, 'ESPN access needs attention. Check the server-side league credentials.')
+  const payload = await readSeason(season, season !== currentSeason)
+  const dashboard = normalizeEspnLeague(payload, leagueId, season)
+  dashboard.currentSeason = currentSeason
+  dashboard.availableSeasons = availableSeasons
+  if (season !== currentSeason) {
+    dashboard.seasonChampion = readSeasonChampion(payload)
+  } else {
+    // Optional history cannot take down valid current standings.
+    try {
+      const previous = await readSeason(currentSeason - 1, true)
+      const champion = readSeasonChampion(previous)
+      if (champion && sameOwners(payload, previous, champion.teamId)) dashboard.seasonContext.previousSeasonChampionTeamId = champion.teamId
+    } catch { /* Unknown history keeps the badge absent. */ }
   }
-  if (response.status === 404) {
-    throw new LeagueDataError(503, 'The configured ESPN league or season was not found.')
-  }
-  if (!response.ok) throw new LeagueDataError(502, 'ESPN is temporarily unavailable. Try again later.')
-  let payload: unknown
-  try { payload = await response.json() } catch {
-    throw new LeagueDataError(502, 'ESPN returned incomplete league data. Try again later.')
-  }
-  return normalizeEspnLeague(payload, leagueId, season)
+  return dashboard
 }
