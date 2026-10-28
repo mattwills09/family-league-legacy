@@ -117,7 +117,44 @@ function parseSeasonChampion(payload: unknown): SeasonChampion | null {
   const opponent = league.teams.map(object).find((entry) => entry.id === runnerUp.teamId)
   if (!team || !opponent) return null
   const name = (entry: JsonObject) => text(entry.name) || [text(entry.location), text(entry.nickname)].filter(Boolean).join(' ') || `Team ${entry.id}`
-  return { teamId: number(team.id, true), teamName: name(team), runnerUpName: name(opponent), winningPoints: number(winner.totalPoints), runnerUpPoints: number(runnerUp.totalPoints) }
+  return {
+    teamId: number(team.id, true), teamName: name(team),
+    runnerUpName: name(opponent), runnerUpTeamId: number(opponent.id, true),
+    thirdPlaceTeamId: readThirdPlace(league, lastPeriod, [number(team.id, true), number(opponent.id, true)]),
+    winningPoints: number(winner.totalPoints), runnerUpPoints: number(runnerUp.totalPoints),
+  }
+}
+
+/** ESPN's consolation ladder includes several placements. Identify the semifinal losers' game. */
+function readThirdPlace(league: JsonObject, finalPeriod: number, finalists: number[]): number | null {
+  try {
+    if (!Array.isArray(league.schedule) || !Array.isArray(league.teams)) return null
+    const games = league.schedule.map(object)
+    const earlier = games.filter((game) => game.playoffTierType === 'WINNERS_BRACKET' && typeof game.matchupPeriodId === 'number' && game.matchupPeriodId < finalPeriod)
+    const semifinalPeriod = Math.max(...earlier.map((game) => number(game.matchupPeriodId, true)))
+    const semifinals = earlier.filter((game) => game.matchupPeriodId === semifinalPeriod)
+    if (semifinals.length !== 2) return null
+    const losers = semifinals.map((game) => {
+      if (game.winner !== 'HOME' && game.winner !== 'AWAY') throw new Error('Undecided semifinal')
+      const won = object(game.winner === 'HOME' ? game.home : game.away)
+      const lost = object(game.winner === 'HOME' ? game.away : game.home)
+      if (!finalists.includes(number(won.teamId, true)) || finalists.includes(number(lost.teamId, true))) throw new Error('Ambiguous semifinal')
+      return { winner: number(won.teamId, true), loser: number(lost.teamId, true) }
+    })
+    if (new Set(losers.map((game) => game.winner)).size !== 2 || new Set(losers.map((game) => game.loser)).size !== 2) return null
+    const ids = losers.map((game) => game.loser)
+    const bronzeGames = games.filter((game) => {
+      if (game.matchupPeriodId !== finalPeriod || game.playoffTierType !== 'WINNERS_CONSOLATION_LADDER') return false
+      const home = object(game.home).teamId
+      const away = object(game.away).teamId
+      return home !== away && ids.includes(number(home, true)) && ids.includes(number(away, true))
+    })
+    if (bronzeGames.length !== 1) return null
+    const game = bronzeGames[0]
+    if (game.winner !== 'HOME' && game.winner !== 'AWAY') return null
+    const id = number(object(game.winner === 'HOME' ? game.home : game.away).teamId, true)
+    return league.teams.map(object).some((team) => team.id === id) ? id : null
+  } catch { return null }
 }
 
 function sameOwners(current: unknown, previous: unknown, teamId: number): boolean {

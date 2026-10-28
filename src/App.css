@@ -741,6 +741,11 @@ a {
 .standings-data tbody tr.standings-highlight { background: var(--accent-soft); }
 .standings-team-name { display: inline-flex; align-items: center; gap: 8px; }
 .standings-team-name > span { display: inline-flex; flex-shrink: 0; }
+.standings-trophy-gold { color: var(--accent); }
+.standings-trophy-silver { color: #c5ccd6; }
+.standings-trophy-bronze { color: #e5ac7b; }
+[data-theme='light'] .standings-trophy-silver { color: #5c6470; }
+[data-theme='light'] .standings-trophy-bronze { color: #93551f; }
 .standings-sort { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 6px 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
 .standings-sort svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--text-muted); }
 .standings-data th[aria-sort] .standings-sort svg { color: var(--accent); }

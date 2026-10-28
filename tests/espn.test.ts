@@ -26,7 +26,7 @@ const historical = {
 }
 
 test('champion comes from completed winners-bracket final, not regular-season seed or consolation', () => {
-  assert.deepEqual(readSeasonChampion(historical), { teamId: 7, teamName: 'Example Team', runnerUpName: 'Old Name', winningPoints: 94.2, runnerUpPoints: 77.3 })
+  assert.deepEqual(readSeasonChampion(historical), { teamId: 7, teamName: 'Example Team', runnerUpName: 'Old Name', runnerUpTeamId: 12, thirdPlaceTeamId: null, winningPoints: 94.2, runnerUpPoints: 77.3 })
   assert.equal(readSeasonChampion({ ...historical, scoringPeriodId: 17 }), null)
   assert.equal(readSeasonChampion({ ...historical, schedule: [] }), null)
   assert.equal(readSeasonChampion({ ...historical, schedule: [{ ...historical.schedule[1], home: null }] }), null)
@@ -48,6 +48,32 @@ test('season selection and prior champion keep history out of lifetime totals', 
   assert.equal(previous.seasonChampion?.teamId, 7)
   assert.equal(previous.seasonContext.previousSeasonChampionTeamId, null)
   assert.ok(previous.teams.every((team) => team.championshipsWon === null))
+})
+
+test('bronze comes from the semifinal losers placement game, never seeds or another consolation game', () => {
+  const podium = {
+    ...structuredClone(historical),
+    teams: [...historical.teams, { ...historical.teams[0], id: 20 }, { ...historical.teams[1], id: 30 }],
+    schedule: [
+      { matchupPeriodId: 16, playoffTierType: 'WINNERS_BRACKET', winner: 'HOME', home: { teamId: 7, totalPoints: 100 }, away: { teamId: 20, totalPoints: 90 } },
+      { matchupPeriodId: 16, playoffTierType: 'WINNERS_BRACKET', winner: 'AWAY', home: { teamId: 30, totalPoints: 80 }, away: { teamId: 12, totalPoints: 100 } },
+      historical.schedule[1],
+      historical.schedule[2],
+      { matchupPeriodId: 17, playoffTierType: 'WINNERS_CONSOLATION_LADDER', winner: 'AWAY', home: { teamId: 20, totalPoints: 90 }, away: { teamId: 30, totalPoints: 95 } },
+    ],
+  }
+  assert.equal(readSeasonChampion(podium)?.runnerUpTeamId, 12)
+  assert.equal(readSeasonChampion(podium)?.thirdPlaceTeamId, 30)
+  const missing = { ...podium, schedule: podium.schedule.slice(0, -1) }
+  assert.equal(readSeasonChampion(missing)?.thirdPlaceTeamId, null)
+  assert.equal(readSeasonChampion(missing)?.teamId, 7)
+  assert.equal(readSeasonChampion({ ...podium, schedule: [...podium.schedule, podium.schedule[4]] })?.thirdPlaceTeamId, null)
+  const undecided = structuredClone(podium)
+  undecided.schedule[4].winner = 'UNDECIDED'
+  assert.equal(readSeasonChampion(undecided)?.thirdPlaceTeamId, null)
+  const tied = structuredClone(podium)
+  tied.schedule[4].away.totalPoints = 90
+  assert.equal(readSeasonChampion(tied)?.thirdPlaceTeamId, 30)
 })
 
 test('unavailable history and ownership changes suppress the badge without breaking current standings', async () => {

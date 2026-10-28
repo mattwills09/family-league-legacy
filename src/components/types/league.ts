@@ -30,6 +30,8 @@ export interface SeasonChampion {
     teamId: number;
     teamName: string;
     runnerUpName: string;
+    runnerUpTeamId: number;
+    thirdPlaceTeamId: number | null;
     winningPoints: number;
     runnerUpPoints: number;
 }
