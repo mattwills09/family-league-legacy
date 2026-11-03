@@ -10,11 +10,11 @@ A fantasy football dashboard for The 12th Timers, combining live ESPN standings 
 
 - Live team standings, wins-losses-ties records, and scoring statistics
 - Sortable columns and expandable team details
-- Current/previous-season selection, a verified historical championship summary, and the prior-season champion badge
+- ESPN season selection back to 2013, verified historical podium trophies, and the prior-season champion badge
 - Persistent light and dark themes with responsive, accessible layouts
 - Server-side ESPN integration with loading, retry, and a labeled sample fallback
 
-The current and previous season are connected. Older seasons and lifetime achievements remain planned; unavailable history is clearly identified in the dashboard.
+Seasons from 2013 through the configured current year are available for this league. Lifetime achievements remain planned until team and owner continuity is verified; unavailable history is clearly identified in the dashboard.
 
 ---
 

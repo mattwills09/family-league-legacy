@@ -99,7 +99,10 @@ function parseSeasonChampion(payload: unknown): SeasonChampion | null {
   const settings = object(league.settings ?? {})
   const scheduleSettings = object(settings.scheduleSettings ?? {})
   const status = object(league.status ?? {})
-  if (typeof status.finalScoringPeriod !== 'number' || typeof league.scoringPeriodId !== 'number' || league.scoringPeriodId <= status.finalScoringPeriod) return null
+  // Archive responses pin scoringPeriodId to their last fantasy week; latestScoringPeriod
+  // still indicates that the season progressed beyond that final week.
+  const latestPeriod = Math.max(...[league.scoringPeriodId, status.latestScoringPeriod].filter((value): value is number => typeof value === 'number' && Number.isFinite(value)))
+  if (typeof status.finalScoringPeriod !== 'number' || latestPeriod <= status.finalScoringPeriod) return null
   if (!Array.isArray(league.schedule) || !Array.isArray(league.teams)) return null
   const periods = Object.keys(object(scheduleSettings.matchupPeriods ?? {})).map(Number).filter(Number.isFinite)
   if (!periods.length) return null
@@ -176,15 +179,16 @@ export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fe
     throw new LeagueDataError(503, 'League connection is not configured yet.')
   }
   const s2 = env.ESPN_S2?.trim()
-  const availableSeasons = [currentSeason, currentSeason - 1]
   const season = requestedSeason ?? currentSeason
-  if (!availableSeasons.includes(season)) throw new LeagueDataError(400, 'Select the current or previous season.')
+  if (!Number.isInteger(season) || season < 2000 || season > currentSeason) throw new LeagueDataError(400, 'Select an available league season.')
   const swid = env.ESPN_SWID?.trim()
   if (Boolean(s2) !== Boolean(swid) || [s2, swid].some((value) => value && /[\r\n;]/.test(value))) {
     throw new LeagueDataError(503, 'League credentials need to be configured on the server.')
   }
   async function readSeason(year: number, playoffs: boolean): Promise<unknown> {
-    const url = new URL(`https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl/seasons/${year}/segments/0/leagues/${leagueId}`)
+    const base = 'https://lm-api-reads.fantasy.espn.com/apis/v3/games/ffl'
+    const url = new URL(year < 2018 ? `${base}/leagueHistory/${leagueId}` : `${base}/seasons/${year}/segments/0/leagues/${leagueId}`)
+    if (year < 2018) url.searchParams.set('seasonId', String(year))
     url.searchParams.append('view', 'mTeam')
     url.searchParams.append('view', 'mStandings')
     if (playoffs) {
@@ -212,19 +216,39 @@ export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fe
     try { payload = await response.json() } catch {
       throw new LeagueDataError(502, 'ESPN returned incomplete league data. Try again later.')
     }
+    if (Array.isArray(payload)) {
+      payload = payload.find((entry: unknown) => {
+        const record = object(entry)
+        return record.id === leagueId && record.seasonId === year
+      })
+    }
     normalizeEspnLeague(payload, leagueId, year)
     return payload
   }
-  const payload = await readSeason(season, season !== currentSeason)
+  // ESPN advertises the league's actual history; do not assume a fixed year range.
+  const current = await readSeason(currentSeason, false)
+  const status = object(object(current).status ?? {})
+  const previousSeasons = Array.isArray(status.previousSeasons)
+    ? status.previousSeasons.filter((year): year is number => typeof year === 'number' && Number.isInteger(year) && year >= 2000 && year < currentSeason)
+    : []
+  const availableSeasons = [...new Set([currentSeason, ...previousSeasons])].sort((a, b) => b - a)
+  if (!availableSeasons.includes(season)) throw new LeagueDataError(400, 'Select an available league season.')
+  const previousRequest = availableSeasons.includes(season - 1)
+    ? readSeason(season - 1, true).catch(() => null)
+    : Promise.resolve(null)
+  const [payload, previous] = await Promise.all([
+    season === currentSeason ? Promise.resolve(current) : readSeason(season, true),
+    previousRequest,
+  ])
   const dashboard = normalizeEspnLeague(payload, leagueId, season)
   dashboard.currentSeason = currentSeason
   dashboard.availableSeasons = availableSeasons
   if (season !== currentSeason) {
     dashboard.seasonChampion = readSeasonChampion(payload)
-  } else {
-    // Optional history cannot take down valid current standings.
+  }
+  // The badge always references the year before the displayed season, not today's year.
+  if (previous) {
     try {
-      const previous = await readSeason(currentSeason - 1, true)
       const champion = readSeasonChampion(previous)
       if (champion && sameOwners(payload, previous, champion.teamId)) dashboard.seasonContext.previousSeasonChampionTeamId = champion.teamId
     } catch { /* Unknown history keeps the badge absent. */ }

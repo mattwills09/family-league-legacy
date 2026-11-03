@@ -28,9 +28,9 @@ The public dashboard exposes normalized team names, owner names, records, and sc
 - ESPN IDs are preserved. The adapter handles current `name` and older `location` / `nickname` fields, and resolves co-owners from member IDs without publishing member records.
 - W-L-T and points use `record.overall`. Missing records fail validation rather than becoming fictitious zeroes. Genuine zero records remain valid.
 - Complete, unique ESPN playoff seeds provide standings order. When seeds are unavailable, the existing wins, ties, differential, points-for sort is retained.
-- Historical achievement fields remain nullable; one completed season does not establish lifetime totals. The selector offers the configured year and its predecessor. A completed winners-bracket final establishes the historical championship result and the current year's prior-champion badge when owner IDs match.
+- Historical achievement fields remain nullable until identity continuity is verified. The selector uses ESPN's advertised years (2013–2026 for this league). Before 2018, the adapter uses the archive endpoint. Completed playoff results establish historical trophies; the previous-year badge requires matching owner IDs and always references the year before the displayed season.
 - The browser shows loading, error, retry, and an explicitly labeled sample-dashboard fallback. Live standings never mix with mock all-time achievements. No automatic polling or credential persistence in the browser.
-- Only a fixed ESPN host and configured league are called. The optional season query is restricted to the configured year and its predecessor. Each upstream request times out after 12 seconds and refuses redirects. Error bodies are sanitized, and responses use `Cache-Control: no-store`.
+- Only a fixed ESPN host and configured league are called. Season queries must appear in the current league's ESPN metadata. Each upstream request times out after 12 seconds and refuses redirects. Error bodies are sanitized, and responses use `Cache-Control: no-store`.
 
 ## Validation
 

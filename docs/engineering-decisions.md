@@ -82,14 +82,24 @@ Key tradeoffs behind the current implementation. This document describes the res
 
 **Problem:** Regular-season seeds do not identify the playoff champion. Team IDs may also be reassigned between seasons.
 
-**Decision:** Offer the configured season and the immediately preceding season. Request ESPN settings and matchup scores for the historical year, require a completed season and a unique final-period winners-bracket game, and use ESPN's declared winner (including tied scores resolved by its tiebreaker). Display historical standings as regular-season results and the championship separately. Award the prior-champion badge only when team and owner IDs match across years.
+**Decision:** Discover years from ESPN's current-season metadata and allow only advertised seasons. Request ESPN settings and matchup scores for the selected historical year, require a completed season and a unique final-period winners-bracket game, and use ESPN's declared winner (including tied scores resolved by its tiebreaker). Display historical standings as regular-season results and the championship separately. Award the prior-champion badge only when team and owner IDs match across adjacent years relative to the displayed season.
 
-**Tradeoff:** Older seasons and changed-ownership cases need further identity work. Historical failures suppress the optional badge without breaking current standings. The first historical season does not establish all-time totals or the champion of the year before it.
+**Tradeoff:** Cross-season ownership changes still need identity work before calculating lifetime totals. Optional prior-year failures suppress the badge without breaking selected standings. The earliest advertised season does not establish a champion for the preceding year. Current metadata is read first, then the selected and optional prior year are loaded in parallel to avoid loading the entire archive per request.
 
 For league 684618, the 2025 final was verified from ESPN and confirmed by the league owner: uncle rico's defeated Hail Mama!, 94.2–77.3. No champion ID is hard-coded into the application.
 
-Validation: ten automated tests, lint, and the production build passed. Live adapter checks returned 12 teams in each season, champion ID 10 for 2025, and the matching previous-season badge for 2026. Browser checks confirmed switching seasons, the historical final, regular-season labels, and a single 2026 badge; 2025 does not invent a 2024 champion. Deployment verification remains separate.
+The initial 2025 milestone was checked against the live API and browser before expanding history. Automated coverage includes malformed seasons, identity changes, missing history, archive response validation, and ambiguous playoff outcomes. Deployment verification remains separate from local checks.
 
 Past-season tables highlight the verified playoff champion, with an accessible season-specific trophy beside the team name. Current-season tables highlight the standings leader. Both highlights remain attached to team identity when rows are sorted; a past season without a verified champion has no highlighted row. Rank labels and the regular-season leader summary remain unchanged. The historical table trophy is distinct from the previous-season champion badge on current team cards.
 
 Gold, silver, and bronze trophies identify postseason first, second, and third place in historical tables. Silver uses the championship loser. Bronze requires a unique final-period placement game between the two verified semifinal losers; ESPN's consolation ladder also contains other placements, so its first listed game cannot determine third place. Unknown or ambiguous bronze results remain null. ESPN's declared winner resolves tied scores. For 2025, Hail Mama! finished second and Team Lundy won third place, 98.2–86.6 against Madi Moose. Colors support both themes and accessible labels state the year and placement; only the champion row receives the background highlight.
+
+## ESPN Archive Compatibility
+
+**Problem:** ESPN uses a different route and response envelope before 2018. Its archived scoring-period field also stays pinned to the final fantasy week, which initially suppressed completed-season trophies.
+
+**Decision:** Use `leagueHistory` with an explicit season query before 2018 and select the matching league/year from its array. For completion, accept the upstream latest scoring period progressing beyond the final fantasy period, then require decided, unambiguous playoff games. Keep the same application models and preserve each season's actual roster size and names.
+
+**Tradeoff:** Two upstream formats need testing. The adapter fails closed on wrong years, incomplete records, or ambiguous trophies. No historical owner mappings are invented, and no database import or lifetime aggregation is performed by this read-only connection.
+
+Validation: all 13 automated tests, lint, and the production build passed. Live adapter checks succeeded for every year from 2013–2026 and returned podium placements for all 13 completed seasons. Browser checks confirmed the 14 selector options, 10 teams and three trophies in 2013, and 12 teams and three trophies in 2018. The client bundle credential scan passed. Production deployment remains separate.

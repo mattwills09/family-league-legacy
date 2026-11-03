@@ -6,6 +6,7 @@ import { handleStandings } from '../server/standings-handler.ts'
 
 const fixture = {
   id: 684618, seasonId: 2026,
+  status: { previousSeasons: [2025] },
   members: [{ id: 'owner-1', firstName: 'Example', lastName: 'Owner', email: 'private@example.test' }],
   teams: [
     { id: 7, name: 'Example Team', owners: ['owner-1'], playoffSeed: 2, record: { overall: { wins: 2, losses: 1, ties: 1, pointsFor: 401.25, pointsAgainst: 390.1 } } },
@@ -28,6 +29,8 @@ const historical = {
 test('champion comes from completed winners-bracket final, not regular-season seed or consolation', () => {
   assert.deepEqual(readSeasonChampion(historical), { teamId: 7, teamName: 'Example Team', runnerUpName: 'Old Name', runnerUpTeamId: 12, thirdPlaceTeamId: null, winningPoints: 94.2, runnerUpPoints: 77.3 })
   assert.equal(readSeasonChampion({ ...historical, scoringPeriodId: 17 }), null)
+  assert.equal(readSeasonChampion({ ...historical, scoringPeriodId: 17, status: { finalScoringPeriod: 17, latestScoringPeriod: 19 } })?.teamId, 7)
+  assert.equal(readSeasonChampion({ ...historical, scoringPeriodId: 17, status: { finalScoringPeriod: 17, latestScoringPeriod: 17 } }), null)
   assert.equal(readSeasonChampion({ ...historical, schedule: [] }), null)
   assert.equal(readSeasonChampion({ ...historical, schedule: [{ ...historical.schedule[1], home: null }] }), null)
   assert.equal(readSeasonChampion({ ...historical, schedule: [...historical.schedule, historical.schedule[1]] }), null)
@@ -83,7 +86,46 @@ test('unavailable history and ownership changes suppress the badge without break
   changed.teams[0].owners = ['new-owner']
   const reassigned: typeof fetch = async (input) => Response.json(String(input).includes('/2025/') ? changed : fixture)
   assert.equal((await fetchEspnLeague(env, reassigned)).seasonContext.previousSeasonChampionTeamId, null)
-  await assert.rejects(fetchEspnLeague(env, missing, 2024), /current or previous/)
+  await assert.rejects(fetchEspnLeague(env, missing, 2024), /available league season/)
+})
+
+test('discovers league seasons from metadata and normalizes old archive arrays', async () => {
+  const current = { ...fixture, status: { previousSeasons: [2013, 2014, 2018, 2025, 2013, 9999, '2012'] } }
+  const archive = { ...historical, seasonId: 2013 }
+  const paths: string[] = []
+  const fetcher: typeof fetch = async (input) => {
+    const url = new URL(String(input))
+    paths.push(url.href)
+    if (url.pathname.includes('/2026/')) return Response.json(current)
+    if (url.pathname.includes('/leagueHistory/')) {
+      assert.equal(url.searchParams.get('seasonId'), '2013')
+      return Response.json([{ ...archive, seasonId: 2012 }, archive])
+    }
+    return new Response('', { status: 404 })
+  }
+  const data = await fetchEspnLeague(env, fetcher, 2013)
+  assert.deepEqual(data.availableSeasons, [2026, 2025, 2018, 2014, 2013])
+  assert.equal(data.season, 2013)
+  assert.equal(data.teams.length, 2)
+  assert.equal(data.seasonChampion?.teamId, 7)
+  assert.equal(data.seasonContext.previousSeasonChampionTeamId, null)
+  assert.ok(!paths.some((path) => path.includes('seasonId=2012')))
+  await assert.rejects(fetchEspnLeague(env, fetcher, 2012), /available league season/)
+  assert.ok(!paths.some((path) => path.includes('seasonId=2012')))
+  const wrongArchive: typeof fetch = async (input) => String(input).includes('/2026/')
+    ? Response.json(current) : Response.json([{ ...archive, seasonId: 2012 }])
+  await assert.rejects(fetchEspnLeague(env, wrongArchive, 2013), /incomplete league data/)
+})
+
+test('historical team cards use the champion from the preceding selected year', async () => {
+  const current = { ...fixture, status: { previousSeasons: [2024, 2025] } }
+  const fetcher: typeof fetch = async (input) => {
+    const url = String(input)
+    return Response.json(url.includes('/2026/') ? current : { ...historical, seasonId: url.includes('/2024/') ? 2024 : 2025 })
+  }
+  const data = await fetchEspnLeague(env, fetcher, 2025)
+  assert.equal(data.seasonContext.previousSeasonChampionTeamId, 7)
+  assert.equal(data.seasonChampion?.teamId, 7)
 })
 
 test('maps actual IDs, ties, scores, names, co-owners, seeds; leaves history unknown', () => {

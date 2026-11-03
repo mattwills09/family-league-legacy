@@ -56,7 +56,11 @@ TypeScript defines the application contract; runtime validation checks upstream 
 
 Current-season data cannot establish lifetime playoff appearances or championships. Those values remain `null`, displayed as unavailable. A historical season includes an optional championship summary, separate from regular-season order. A completed preceding-season final establishes the current dashboard's previous-champion badge only when team and owner IDs match.
 
-`/api/standings?season=2025` selects the historical season when `ESPN_SEASON=2026`. The server restricts selection to the configured season and its predecessor. Earlier seasons, including the year before that historical selection, are not fetched in this milestone. Settings and `mMatchupScore` are needed to distinguish the championship from consolation games; regular standings alone are insufficient.
+`/api/standings?season=2013` selects a historical season. The server discovers available years from the configured current season's `status.previousSeasons`, filters and deduplicates them, and validates each requested year against that list. League 684618 advertises 2013–2025 alongside the configured 2026 season.
+
+Seasons before 2018 use ESPN's `leagueHistory` endpoint with a `seasonId` query. Archive arrays are matched by both league ID and season; a mismatched response is rejected. Newer seasons use the season-specific endpoint. Settings and `mMatchupScore` distinguish the championship from consolation games. Archived responses may pin `scoringPeriodId` to their final week, so completion also considers `status.latestScoringPeriod`; undecided or ambiguous results still produce no trophy.
+
+Only the selected year and its preceding available year are loaded in addition to current-season metadata, not the whole archive on every page load. Optional prior-year failures do not block selected standings. The previous-season badge compares team and owner IDs relative to the displayed season. The earliest available season has no preceding-year badge.
 
 ## Ranking and Display Sorting
 

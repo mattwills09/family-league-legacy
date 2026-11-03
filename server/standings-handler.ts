@@ -15,7 +15,7 @@ export async function handleStandings(req: IncomingMessage, res: ServerResponse,
   try {
     const seasons = new URL(req.url ?? '/api/standings', 'http://localhost').searchParams.getAll('season')
     if (seasons.length > 1 || (seasons.length === 1 && !/^\d{4}$/.test(seasons[0]))) {
-      throw new LeagueDataError(400, 'Select the current or previous season.')
+      throw new LeagueDataError(400, 'Select an available league season.')
     }
     res.end(JSON.stringify(await fetchEspnLeague(env, fetch, seasons.length ? Number(seasons[0]) : undefined)))
   } catch (error) {
