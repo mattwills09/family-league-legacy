@@ -26,6 +26,18 @@ const standingsColumns: { key: StandingsColumn; label: string; title?: string }[
   { key: 'pointDifferential', label: 'Diff', title: 'Point differential' },
 ]
 
+function toTitleCase(str: string): string {
+  const titleCase = str
+    .toLowerCase()
+    .split(' ')
+    .map((word: string) => {
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+
+  return titleCase;
+}
+
 export function DashboardPage() {
   const { state, retry, selectSeason, seasonOptions, selectedSeason } = useLeagueDashboard()
   const [showSample, setShowSample] = useState(false)
@@ -87,18 +99,6 @@ export function DashboardPage() {
   const highlightedTeamId = isPastSeason ? seasonChampionId : topTeam.id
   const ranks = new Map(sortedTeams.map((team, index) => [team.id, index + 1]))
   const tableTeams = sortStandings(teams, ranks, tableSort)
-
-  function toTitleCase(str: string): string {
-    const titleCase = str
-      .toLowerCase()
-      .split(' ')
-      .map((word: string) => {
-        return word.charAt(0).toUpperCase() + word.slice(1);
-      })
-      .join(' ');
-
-    return titleCase;
-  }
 
   function changeSort(column: StandingsColumn) {
     setTableSort((current) => ({
