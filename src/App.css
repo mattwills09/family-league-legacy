@@ -753,6 +753,18 @@ a {
 .standings-data.champions-data { min-width: 500px; }
 .champions-data a { color: var(--accent); }
 .champions-data td:last-child { white-space: nowrap; }
+.playoff-rounds { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 20px; }
+.playoff-round { display: flex; flex-direction: column; min-width: 0; }
+.playoff-round h3, .playoff-third-place h3 { margin: 0 0 12px; font-family: var(--font-display); }
+.playoff-matchups { display: flex; flex: 1; flex-direction: column; justify-content: space-around; gap: 12px; }
+.playoff-matchup { list-style: none; margin: 0; padding: 0; overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); }
+.playoff-matchup li { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 10px 14px; overflow-wrap: anywhere; }
+.playoff-matchup li + li { border-top: 1px solid var(--border); }
+.playoff-matchup strong { font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.playoff-winner { background: var(--accent-soft); }
+.playoff-winner small { display: block; color: var(--accent); font-weight: 600; }
+.playoff-third-place { margin-top: 24px; max-width: 420px; }
+@media (max-width: 760px) { .playoff-rounds { grid-template-columns: 1fr; } }
 [data-theme='light'] .standings-trophy-silver { color: #5c6470; }
 [data-theme='light'] .standings-trophy-bronze { color: #93551f; }
 .standings-sort { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 6px 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }

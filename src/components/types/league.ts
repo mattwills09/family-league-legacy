@@ -24,6 +24,19 @@ export interface LeagueDashboardData {
     currentSeason: number;
     availableSeasons: number[];
     seasonChampion: SeasonChampion | null;
+    playoffBracket: PlayoffBracketData | null;
+}
+
+export interface PlayoffMatchup {
+    home: { teamId: number; points: number };
+    away: { teamId: number; points: number };
+    winnerTeamId: number;
+}
+
+export interface PlayoffBracketData {
+    rounds: { period: number; matchups: PlayoffMatchup[] }[];
+    thirdPlace: PlayoffMatchup | null;
+    hasUnavailableMatchups: boolean;
 }
 
 export interface SeasonChampion {

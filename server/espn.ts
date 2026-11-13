@@ -1,4 +1,4 @@
-import type { ChampionsRollData, LeagueDashboardData, SeasonChampion } from '../src/components/types/league.ts'
+import type { ChampionsRollData, LeagueDashboardData, PlayoffBracketData, PlayoffMatchup, SeasonChampion } from '../src/components/types/league.ts'
 
 type JsonObject = Record<string, unknown>
 
@@ -82,6 +82,7 @@ export function normalizeEspnLeague(payload: unknown, leagueId: number, season: 
     currentSeason: season,
     availableSeasons: [season],
     seasonChampion: null,
+    playoffBracket: null,
     fetchedAt: new Date().toISOString(),
     standingsTeamIds: seeds.size === teams.length && new Set(seeds.values()).size === teams.length
       ? [...teams].sort((a, b) => seeds.get(a.id)! - seeds.get(b.id)!).map((team) => team.id)
@@ -120,16 +121,17 @@ function parseSeasonChampion(payload: unknown): SeasonChampion | null {
   const opponent = league.teams.map(object).find((entry) => entry.id === runnerUp.teamId)
   if (!team || !opponent) return null
   const name = (entry: JsonObject) => text(entry.name) || [text(entry.location), text(entry.nickname)].filter(Boolean).join(' ') || `Team ${entry.id}`
+  const thirdPlace = readThirdPlace(league, lastPeriod, [number(team.id, true), number(opponent.id, true)])
   return {
     teamId: number(team.id, true), teamName: name(team),
     runnerUpName: name(opponent), runnerUpTeamId: number(opponent.id, true),
-    thirdPlaceTeamId: readThirdPlace(league, lastPeriod, [number(team.id, true), number(opponent.id, true)]),
+    thirdPlaceTeamId: thirdPlace?.winnerTeamId ?? null,
     winningPoints: number(winner.totalPoints), runnerUpPoints: number(runnerUp.totalPoints),
   }
 }
 
 /** ESPN's consolation ladder includes several placements. Identify the semifinal losers' game. */
-function readThirdPlace(league: JsonObject, finalPeriod: number, finalists: number[]): number | null {
+function readThirdPlace(league: JsonObject, finalPeriod: number, finalists: number[]): PlayoffMatchup | null {
   try {
     if (!Array.isArray(league.schedule) || !Array.isArray(league.teams)) return null
     const games = league.schedule.map(object)
@@ -153,10 +155,60 @@ function readThirdPlace(league: JsonObject, finalPeriod: number, finalists: numb
       return home !== away && ids.includes(number(home, true)) && ids.includes(number(away, true))
     })
     if (bronzeGames.length !== 1) return null
-    const game = bronzeGames[0]
+    return normalizePlayoffMatchup(bronzeGames[0], new Set(league.teams.map((team) => object(team).id)))
+  } catch { return null }
+}
+
+function normalizePlayoffMatchup(game: JsonObject, teamIds: Set<unknown>): PlayoffMatchup | null {
+  try {
     if (game.winner !== 'HOME' && game.winner !== 'AWAY') return null
-    const id = number(object(game.winner === 'HOME' ? game.home : game.away).teamId, true)
-    return league.teams.map(object).some((team) => team.id === id) ? id : null
+    const side = (value: unknown) => {
+      const entry = object(value)
+      return { teamId: number(entry.teamId, true), points: number(entry.totalPoints) }
+    }
+    const home = side(game.home)
+    const away = side(game.away)
+    if (home.teamId === away.teamId || !teamIds.has(home.teamId) || !teamIds.has(away.teamId)) return null
+    return { home, away, winnerTeamId: game.winner === 'HOME' ? home.teamId : away.teamId }
+  } catch { return null }
+}
+
+export function readPlayoffBracket(payload: unknown): PlayoffBracketData | null {
+  const champion = readSeasonChampion(payload)
+  return champion ? buildPlayoffBracket(payload, champion) : null
+}
+
+function buildPlayoffBracket(payload: unknown, champion: SeasonChampion): PlayoffBracketData | null {
+  try {
+    const league = object(payload)
+    if (!Array.isArray(league.schedule) || !Array.isArray(league.teams)) return null
+    const teamIds = new Set(league.teams.map((team) => object(team).id))
+    const rounds = new Map<number, PlayoffMatchup[]>()
+    let hasUnavailableMatchups = false
+    for (const entry of league.schedule) {
+      const game = object(entry)
+      if (game.playoffTierType !== 'WINNERS_BRACKET') continue
+      const period = game.matchupPeriodId
+      if (typeof period !== 'number' || !Number.isSafeInteger(period) || period < 1) {
+        hasUnavailableMatchups = true
+        continue
+      }
+      const matchups = rounds.get(period) ?? []
+      rounds.set(period, matchups)
+      const matchup = normalizePlayoffMatchup(game, teamIds)
+      if (matchup) matchups.push(matchup)
+      else hasUnavailableMatchups = true
+    }
+    const orderedRounds = [...rounds].sort(([a], [b]) => a - b).map(([period, matchups]) => ({ period, matchups }))
+    const finalPeriod = orderedRounds.at(-1)?.period
+    if (finalPeriod === undefined) return null
+    const final = orderedRounds.at(-1)?.matchups[0]
+    if (!final || final.winnerTeamId !== champion.teamId || ![final.home.teamId, final.away.teamId].includes(champion.runnerUpTeamId)) return null
+    return {
+      rounds: orderedRounds,
+      thirdPlace: readThirdPlace(league, finalPeriod, [champion.teamId, champion.runnerUpTeamId]),
+      hasUnavailableMatchups,
+    }
   } catch { return null }
 }
 
@@ -253,6 +305,7 @@ export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fe
   dashboard.availableSeasons = availableSeasons
   if (season !== currentSeason) {
     dashboard.seasonChampion = readSeasonChampion(payload)
+    dashboard.playoffBracket = dashboard.seasonChampion ? buildPlayoffBracket(payload, dashboard.seasonChampion) : null
   }
   // The badge always references the year before the displayed season, not today's year.
   if (previous) {

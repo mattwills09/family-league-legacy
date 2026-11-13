@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { fetchChampionsRoll, fetchEspnLeague, normalizeEspnLeague, readSeasonChampion } from '../server/espn.ts'
+import { fetchChampionsRoll, fetchEspnLeague, normalizeEspnLeague, readPlayoffBracket, readSeasonChampion } from '../server/espn.ts'
 import { handleStandings } from '../server/standings-handler.ts'
 
 const fixture = {
@@ -77,6 +77,14 @@ test('bronze comes from the semifinal losers placement game, never seeds or anot
   const tied = structuredClone(podium)
   tied.schedule[4].away.totalPoints = 90
   assert.equal(readSeasonChampion(tied)?.thirdPlaceTeamId, 30)
+  const bracket = readPlayoffBracket({ ...tied, schedule: [...tied.schedule].reverse() })
+  assert.deepEqual(bracket?.rounds.map((round) => [round.period, round.matchups.length]), [[16, 2], [17, 1]])
+  assert.deepEqual(bracket?.thirdPlace, { home: { teamId: 20, points: 90 }, away: { teamId: 30, points: 90 }, winnerTeamId: 30 })
+  const partial = readPlayoffBracket({ ...podium, schedule: [{ ...podium.schedule[0], winner: 'UNDECIDED' }, ...podium.schedule.slice(1)] })
+  assert.equal(partial?.hasUnavailableMatchups, true)
+  assert.equal(partial?.rounds[0].matchups.length, 1)
+  assert.equal(partial?.thirdPlace, null)
+  assert.equal(readPlayoffBracket({ ...podium, scoringPeriodId: 17 }), null)
 })
 
 test('unavailable history and ownership changes suppress the badge without breaking current standings', async () => {

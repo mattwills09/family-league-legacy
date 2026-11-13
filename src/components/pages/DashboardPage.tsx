@@ -12,6 +12,7 @@ import { useState } from 'react'
 
 import { DetailCard } from '../DetailCard';
 import { ChampionsRoll } from '../ChampionsRoll';
+import { PlayoffBracket } from '../PlayoffBracket';
 import { teams as sampleTeams, seasonContext as sampleSeasonContext } from '../data/mockLeagueData';
 import { useLeagueDashboard } from '../../hooks/useLeagueDashboard';
 import { defaultDirection, sortStandings } from '../data/standingsSort';
@@ -210,6 +211,7 @@ export function DashboardPage() {
 
       <hr className="section-divider" />
 
+      {liveData && isPastSeason && <><PlayoffBracket season={liveData.season} bracket={liveData.playoffBracket} teams={teams} /><hr className="section-divider" /></>}
       {liveData && <><ChampionsRoll /><hr className="section-divider" /></>}
 
       {/* TEAM DETAILS AND AVAILABLE LIFETIME STATS */}

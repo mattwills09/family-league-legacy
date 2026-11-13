@@ -115,3 +115,9 @@ Historical standings include a text and icon legend that distinguishes regular-s
 The Champions Roll loads on demand from `/api/standings?view=champions`. It reuses the server's advertised seasons and verified final parser, returning only the year, finalists, scores, and unavailable years. Batches of four limit concurrent ESPN requests. The roll does not delay the standings or require cross-season identity matching. Each year links to its shareable standings view.
 
 Team cards omit unknown lifetime totals and keep one section-level explanation. Verified season stats remain in the existing details disclosure; known lifetime values, including zero, remain visible when available.
+
+## Historical Playoff Bracket
+
+The historical dashboard reuses the selected season's existing ESPN schedule request. The server returns only team IDs, points, ESPN's declared winner, and round grouping. It requires a verified final before rendering the bracket. Missing or undecided games are omitted with an availability note; a third-place game must match the verified semifinal losers. Other consolation results and regular-season games are excluded.
+
+The bracket shows chronological rounds with explicit winner labels, stacks rounds on narrow screens, and keeps the third-place matchup separate. It needs no database, additional request, or cross-season identity mapping.
