@@ -39,20 +39,18 @@ function toTitleCase(str: string): string {
 }
 
 export function DashboardPage() {
-  const { state, retry, selectSeason, seasonOptions, selectedSeason } = useLeagueDashboard()
-  const [showSample, setShowSample] = useState(false)
+  const { state, retry, selectSeason, seasonOptions, selectedSeason, showSample } = useLeagueDashboard()
   const [tableSort, setTableSort] = useState<StandingsSort>({ column: 'rank', direction: 'ascending' })
   const seasonPicker = seasonOptions && <div className="season-picker">
     <label htmlFor="league-season">Season</label>
     <select id="league-season" value={selectedSeason ?? seasonOptions.current} onChange={(event) => {
-      setShowSample(false)
       setTableSort({ column: 'rank', direction: 'ascending' })
       selectSeason(Number(event.target.value))
     }}>
       {seasonOptions.available.map((season) => <option key={season} value={season}>{season}{season === seasonOptions.current ? ' · Current' : ''}</option>)}
     </select>
   </div>
-  if (state.status !== 'ready' && !showSample) {
+  if (state.status === 'loading' || state.status === 'error') {
     return (
       <main className="dashboard">
         {seasonPicker}
@@ -63,14 +61,14 @@ export function DashboardPage() {
             <p>{state.message}</p>
             <div className="league-actions">
               <button type="button" onClick={retry}>Try again</button>
-              <button type="button" onClick={() => setShowSample(true)}>View sample dashboard</button>
+              <button type="button" onClick={showSample}>View sample dashboard</button>
             </div>
           </>}
         </section>
       </main>
     )
   }
-  const liveData = state.status === 'ready' && !showSample ? state.data : null
+  const liveData = state.status === 'ready' ? state.data : null
   const teams = liveData?.teams ?? sampleTeams
   const seasonContext = liveData?.seasonContext ?? sampleSeasonContext
   const officialOrder = liveData?.standingsTeamIds
@@ -124,7 +122,7 @@ export function DashboardPage() {
       {seasonPicker}
       <div className="league-source" role="status">
         {liveData ? `ESPN · ${liveData.season} season · Updated ${new Date(liveData.fetchedAt).toLocaleString()}` : 'Sample dashboard · Illustrative data, not your ESPN league'}
-        {!liveData && <button type="button" onClick={() => { setShowSample(false); retry() }}>Reconnect to ESPN</button>}
+        {!liveData && <button type="button" onClick={retry}>Reconnect to ESPN</button>}
       </div>
 
       {/* CURRENT SEASON SUMMARY */}
@@ -158,8 +156,16 @@ export function DashboardPage() {
           </div>
         </div>
 
+        {isPastSeason && <div className="standings-legend" id="standings-legend">
+          <p>Rank reflects the regular season. Trophies show verified playoff finishes.</p>
+          <ul aria-label="Playoff trophy legend">
+            <li><Trophy className="icon standings-trophy-gold" aria-hidden="true" /> Gold · Champion</li>
+            <li><Trophy className="icon standings-trophy-silver" aria-hidden="true" /> Silver · Runner-up</li>
+            <li><Trophy className="icon standings-trophy-bronze" aria-hidden="true" /> Bronze · Third place</li>
+          </ul>
+        </div>}
         <div className="standings-table" role="region" aria-label="League standings, scroll horizontally for all statistics" tabIndex={0}>
-          <table className="standings-data" aria-label={`${liveData?.season ?? 'Sample'} season league standings`}>
+          <table className="standings-data" aria-label={`${liveData?.season ?? 'Sample'} season league standings`} aria-describedby={isPastSeason ? 'standings-legend' : undefined}>
             <thead>
               <tr>
                 {standingsColumns.map((column) => {

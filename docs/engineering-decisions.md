@@ -103,3 +103,9 @@ Gold, silver, and bronze trophies identify postseason first, second, and third p
 **Tradeoff:** Two upstream formats need testing. The adapter fails closed on wrong years, incomplete records, or ambiguous trophies. No historical owner mappings are invented, and no database import or lifetime aggregation is performed by this read-only connection.
 
 Validation: all 13 automated tests, lint, and the production build passed. Live adapter checks succeeded for every year from 2013–2026 and returned podium placements for all 13 completed seasons. Browser checks confirmed the 14 selector options, 10 teams and three trophies in 2013, and 12 teams and three trophies in 2018. The client bundle credential scan passed. Production deployment remains separate.
+
+## Shareable Season Views
+
+The season picker writes `?season=YYYY` to browser history and restores it on initial load and Back/Forward. It preserves unrelated query parameters and the fragment. An invalid season parameter falls back to the configured current season; the server still validates requested years against ESPN metadata. No routing dependency is needed.
+
+Historical standings include a text and icon legend that distinguishes regular-season rank from verified gold, silver, and bronze playoff finishes. The table references the legend for assistive technology.

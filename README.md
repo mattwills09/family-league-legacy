@@ -14,7 +14,7 @@ A fantasy football dashboard for The 12th Timers, combining live ESPN standings 
 - Persistent light and dark themes with responsive, accessible layouts
 - Server-side ESPN integration with loading, retry, and a labeled sample fallback
 
-Seasons from 2013 through the configured current year are available for this league. Lifetime achievements remain planned until team and owner continuity is verified; unavailable history is clearly identified in the dashboard.
+Seasons from 2013 through the configured current year are available for this league. Select a year and copy the address to share it, for example `?season=2013`. Historical tables explain how playoff trophies differ from regular-season rank. Lifetime achievements remain planned until team and owner continuity is verified; unavailable history is clearly identified in the dashboard.
 
 ---
 

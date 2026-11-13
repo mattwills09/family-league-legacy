@@ -744,6 +744,10 @@ a {
 .standings-trophy-gold { color: var(--accent); }
 .standings-trophy-silver { color: #c5ccd6; }
 .standings-trophy-bronze { color: #e5ac7b; }
+.standings-legend { margin-bottom: 16px; color: var(--text-secondary); font-size: 0.875rem; }
+.standings-legend p { margin: 0 0 8px; }
+.standings-legend ul { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; padding: 0; list-style: none; }
+.standings-legend li { display: inline-flex; align-items: center; gap: 6px; }
 [data-theme='light'] .standings-trophy-silver { color: #5c6470; }
 [data-theme='light'] .standings-trophy-bronze { color: #93551f; }
 .standings-sort { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 6px 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
