@@ -11,6 +11,7 @@ import {
 import { useState } from 'react'
 
 import { DetailCard } from '../DetailCard';
+import { ChampionsRoll } from '../ChampionsRoll';
 import { teams as sampleTeams, seasonContext as sampleSeasonContext } from '../data/mockLeagueData';
 import { useLeagueDashboard } from '../../hooks/useLeagueDashboard';
 import { defaultDirection, sortStandings } from '../data/standingsSort';
@@ -209,12 +210,14 @@ export function DashboardPage() {
 
       <hr className="section-divider" />
 
-      {/* ALL-TIME HIGHLIGHTS */}
+      {liveData && <><ChampionsRoll /><hr className="section-divider" /></>}
+
+      {/* TEAM DETAILS AND AVAILABLE LIFETIME STATS */}
       <section className="standings-section">
         <div className="section-header">
           <div>
             <span className="eyebrow">League Legacy</span>
-            <h2>All-Time Highlights</h2>
+            <h2>{championshipLeader ? 'All-Time Highlights' : 'Team Details'}</h2>
           </div>
         </div>
 
@@ -268,20 +271,20 @@ export function DashboardPage() {
                   )}
                 </div>
 
-                <div className="legacy-stats">
-                  <div>
+                {(team.playoffAppearances !== null || team.championshipAppearances !== null || team.championshipsWon !== null) && <div className="legacy-stats">
+                  {team.playoffAppearances !== null && <div>
                     <span>Playoff Appearances</span>
-                    <strong>{team.playoffAppearances ?? 'Not available'}</strong>
-                  </div>
-                  <div>
+                    <strong>{team.playoffAppearances}</strong>
+                  </div>}
+                  {team.championshipAppearances !== null && <div>
                     <span>Championship Appearances</span>
-                    <strong>{team.championshipAppearances ?? 'Not available'}</strong>
-                  </div>
-                  <div>
+                    <strong>{team.championshipAppearances}</strong>
+                  </div>}
+                  {team.championshipsWon !== null && <div>
                     <span>Championships</span>
-                    <strong>{team.championshipsWon ?? 'Not available'}</strong>
-                  </div>
-                </div>
+                    <strong>{team.championshipsWon}</strong>
+                  </div>}
+                </div>}
                 <details className="team-details">
                   <summary>View team details</summary>
                   <dl className="team-details-grid">
@@ -290,7 +293,7 @@ export function DashboardPage() {
                     <div><dt>Points For</dt><dd>{team.pointsFor.toFixed(1)}</dd></div>
                     <div><dt>Points Against</dt><dd>{team.pointsAgainst.toFixed(1)}</dd></div>
                     <div><dt>Win Percentage</dt><dd>{team.wins + team.losses + team.ties === 0 ? 'No games played' : `${(((team.wins + team.ties / 2) / (team.wins + team.losses + team.ties)) * 100).toFixed(1)}%`}</dd></div>
-                    <div><dt>Championships Won</dt><dd>{team.championshipAppearances === null || team.championshipsWon === null ? 'Not available' : team.championshipAppearances === 0 ? 'No appearances' : `${team.championshipsWon} of ${team.championshipAppearances}`}</dd></div>
+                    {team.championshipAppearances !== null && team.championshipsWon !== null && <div><dt>Championships Won</dt><dd>{team.championshipAppearances === 0 ? 'No appearances' : `${team.championshipsWon} of ${team.championshipAppearances}`}</dd></div>}
                   </dl>
                 </details>
               </article>

@@ -36,6 +36,11 @@ export interface SeasonChampion {
     runnerUpPoints: number;
 }
 
+export interface ChampionsRollData {
+    finals: Array<Pick<SeasonChampion, 'teamName' | 'runnerUpName' | 'winningPoints' | 'runnerUpPoints'> & { season: number }>;
+    unavailableSeasons: number[];
+}
+
 export interface LeagueSeasonContext {
     /** Null until the previous season's champion is supplied. */
     previousSeasonChampionTeamId: FantasyTeam['id'] | null;

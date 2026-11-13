@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { fetchEspnLeague, LeagueDataError } from './espn.ts'
+import { fetchChampionsRoll, fetchEspnLeague, LeagueDataError } from './espn.ts'
 
 export async function handleStandings(req: IncomingMessage, res: ServerResponse, env: NodeJS.ProcessEnv = process.env) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8')
@@ -13,7 +13,12 @@ export async function handleStandings(req: IncomingMessage, res: ServerResponse,
     return
   }
   try {
-    const seasons = new URL(req.url ?? '/api/standings', 'http://localhost').searchParams.getAll('season')
+    const params = new URL(req.url ?? '/api/standings', 'http://localhost').searchParams
+    if (params.get('view') === 'champions') {
+      res.end(JSON.stringify(await fetchChampionsRoll(env)))
+      return
+    }
+    const seasons = params.getAll('season')
     if (seasons.length > 1 || (seasons.length === 1 && !/^\d{4}$/.test(seasons[0]))) {
       throw new LeagueDataError(400, 'Select an available league season.')
     }

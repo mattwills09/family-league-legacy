@@ -1,4 +1,4 @@
-import type { LeagueDashboardData, SeasonChampion } from '../src/components/types/league.ts'
+import type { ChampionsRollData, LeagueDashboardData, SeasonChampion } from '../src/components/types/league.ts'
 
 type JsonObject = Record<string, unknown>
 
@@ -172,15 +172,13 @@ function sameOwners(current: unknown, previous: unknown, teamId: number): boolea
   return a.length > 0 && a.length === b.length && a.every((id, index) => id === b[index])
 }
 
-export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fetch = fetch, requestedSeason?: number): Promise<LeagueDashboardData> {
+function createEspnClient(env: NodeJS.ProcessEnv, fetcher: typeof fetch) {
   const leagueId = Number(env.ESPN_LEAGUE_ID)
   const currentSeason = Number(env.ESPN_SEASON)
   if (!Number.isSafeInteger(leagueId) || leagueId <= 0 || !Number.isInteger(currentSeason) || currentSeason < 2019 || currentSeason > 2100) {
     throw new LeagueDataError(503, 'League connection is not configured yet.')
   }
   const s2 = env.ESPN_S2?.trim()
-  const season = requestedSeason ?? currentSeason
-  if (!Number.isInteger(season) || season < 2000 || season > currentSeason) throw new LeagueDataError(400, 'Select an available league season.')
   const swid = env.ESPN_SWID?.trim()
   if (Boolean(s2) !== Boolean(swid) || [s2, swid].some((value) => value && /[\r\n;]/.test(value))) {
     throw new LeagueDataError(503, 'League credentials need to be configured on the server.')
@@ -225,13 +223,23 @@ export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fe
     normalizeEspnLeague(payload, leagueId, year)
     return payload
   }
-  // ESPN advertises the league's actual history; do not assume a fixed year range.
-  const current = await readSeason(currentSeason, false)
+  return { leagueId, currentSeason, readSeason }
+}
+
+function advertisedSeasons(current: unknown, currentSeason: number): number[] {
   const status = object(object(current).status ?? {})
   const previousSeasons = Array.isArray(status.previousSeasons)
     ? status.previousSeasons.filter((year): year is number => typeof year === 'number' && Number.isInteger(year) && year >= 2000 && year < currentSeason)
     : []
-  const availableSeasons = [...new Set([currentSeason, ...previousSeasons])].sort((a, b) => b - a)
+  return [...new Set([currentSeason, ...previousSeasons])].sort((a, b) => b - a)
+}
+
+export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fetch = fetch, requestedSeason?: number): Promise<LeagueDashboardData> {
+  const { leagueId, currentSeason, readSeason } = createEspnClient(env, fetcher)
+  const season = requestedSeason ?? currentSeason
+  if (!Number.isInteger(season) || season < 2000 || season > currentSeason) throw new LeagueDataError(400, 'Select an available league season.')
+  const current = await readSeason(currentSeason, false)
+  const availableSeasons = advertisedSeasons(current, currentSeason)
   if (!availableSeasons.includes(season)) throw new LeagueDataError(400, 'Select an available league season.')
   const previousRequest = availableSeasons.includes(season - 1)
     ? readSeason(season - 1, true).catch(() => null)
@@ -254,4 +262,26 @@ export async function fetchEspnLeague(env: NodeJS.ProcessEnv, fetcher: typeof fe
     } catch { /* Unknown history keeps the badge absent. */ }
   }
   return dashboard
+}
+
+export async function fetchChampionsRoll(env: NodeJS.ProcessEnv, fetcher: typeof fetch = fetch): Promise<ChampionsRollData> {
+  const { currentSeason, readSeason } = createEspnClient(env, fetcher)
+  const current = await readSeason(currentSeason, false)
+  const seasons = advertisedSeasons(current, currentSeason).filter((year) => year < currentSeason)
+  const finals: ChampionsRollData['finals'] = []
+  const unavailableSeasons: number[] = []
+  // Limit parallel requests; the roll loads separately from the standings.
+  for (let index = 0; index < seasons.length; index += 4) {
+    const results = await Promise.all(seasons.slice(index, index + 4).map(async (season) => {
+      const payload = await readSeason(season, true).catch(() => null)
+      return { season, champion: readSeasonChampion(payload) }
+    }))
+    for (const { season, champion } of results) {
+      if (champion) {
+        const { teamName, runnerUpName, winningPoints, runnerUpPoints } = champion
+        finals.push({ season, teamName, runnerUpName, winningPoints, runnerUpPoints })
+      } else unavailableSeasons.push(season)
+    }
+  }
+  return { finals, unavailableSeasons }
 }

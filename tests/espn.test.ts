@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { fetchEspnLeague, normalizeEspnLeague, readSeasonChampion } from '../server/espn.ts'
+import { fetchChampionsRoll, fetchEspnLeague, normalizeEspnLeague, readSeasonChampion } from '../server/espn.ts'
 import { handleStandings } from '../server/standings-handler.ts'
 
 const fixture = {
@@ -115,6 +115,20 @@ test('discovers league seasons from metadata and normalizes old archive arrays',
   const wrongArchive: typeof fetch = async (input) => String(input).includes('/2026/')
     ? Response.json(current) : Response.json([{ ...archive, seasonId: 2012 }])
   await assert.rejects(fetchEspnLeague(env, wrongArchive, 2013), /incomplete league data/)
+})
+
+test('champions roll returns only verified finals in descending order and reports missing years', async () => {
+  const current = { ...fixture, status: { previousSeasons: [2013, 2024, 2025, 2025] } }
+  const fetcher: typeof fetch = async (input) => {
+    const url = new URL(String(input))
+    if (url.pathname.includes('/2026/')) return Response.json(current)
+    if (url.pathname.includes('/2024/')) return Response.json({ ...historical, seasonId: 2024, schedule: [] })
+    if (url.searchParams.get('seasonId') === '2013') return Response.json([{ ...historical, seasonId: 2013 }])
+    return Response.json(historical)
+  }
+  const result = await fetchChampionsRoll(env, fetcher)
+  const expected = { teamName: 'Example Team', runnerUpName: 'Old Name', winningPoints: 94.2, runnerUpPoints: 77.3 }
+  assert.deepEqual(result, { finals: [{ season: 2025, ...expected }, { season: 2013, ...expected }], unavailableSeasons: [2024] })
 })
 
 test('historical team cards use the champion from the preceding selected year', async () => {

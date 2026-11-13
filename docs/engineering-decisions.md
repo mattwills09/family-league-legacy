@@ -109,3 +109,9 @@ Validation: all 13 automated tests, lint, and the production build passed. Live 
 The season picker writes `?season=YYYY` to browser history and restores it on initial load and Back/Forward. It preserves unrelated query parameters and the fragment. An invalid season parameter falls back to the configured current season; the server still validates requested years against ESPN metadata. No routing dependency is needed.
 
 Historical standings include a text and icon legend that distinguishes regular-season rank from verified gold, silver, and bronze playoff finishes. The table references the legend for assistive technology.
+
+## Champions Roll and Team Details
+
+The Champions Roll loads on demand from `/api/standings?view=champions`. It reuses the server's advertised seasons and verified final parser, returning only the year, finalists, scores, and unavailable years. Batches of four limit concurrent ESPN requests. The roll does not delay the standings or require cross-season identity matching. Each year links to its shareable standings view.
+
+Team cards omit unknown lifetime totals and keep one section-level explanation. Verified season stats remain in the existing details disclosure; known lifetime values, including zero, remain visible when available.

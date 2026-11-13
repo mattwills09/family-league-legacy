@@ -748,6 +748,11 @@ a {
 .standings-legend p { margin: 0 0 8px; }
 .standings-legend ul { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 0; padding: 0; list-style: none; }
 .standings-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.champions-roll > summary { cursor: pointer; color: var(--text-primary); margin-bottom: 16px; }
+.champions-roll > summary:focus-visible, .champions-data a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.standings-data.champions-data { min-width: 500px; }
+.champions-data a { color: var(--accent); }
+.champions-data td:last-child { white-space: nowrap; }
 [data-theme='light'] .standings-trophy-silver { color: #5c6470; }
 [data-theme='light'] .standings-trophy-bronze { color: #93551f; }
 .standings-sort { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 6px 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
